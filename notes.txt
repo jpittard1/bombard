@@ -1,0 +1,13 @@
+
+
+
+File          Indexes           First File          Equilibrium File            Last File           All
+saturate          X                 X                       X                       X                  √
+damage            √                 X                       √                       √                  Maybe
+depth             √                 √                       X                       √                  Maybe
+Jmol              X                 X                       X                       X                   √
+
+
+all?
+
+cleanup.py - deletes all xyz files aside from all.xyz (returning to when lint had been run but with results files)

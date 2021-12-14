@@ -1,0 +1,16 @@
+LAMMPS data file from restart file: timestep = 1, procs = 1
+
+0 atoms
+
+2 atom types
+
+0 28.536 xlo xhi
+0 28.536 ylo yhi
+-0.0 32.103 zlo zhi
+
+Masses
+
+1 12.01
+2 2.0014
+
+Atoms
