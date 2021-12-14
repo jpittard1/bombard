@@ -20,7 +20,7 @@ import tools
 import numpy as np
 import matplotlib.pylab as plt
 
-def main(path, prebombard = False):
+def main(path, loaded = False):
 
     initial = tools.file_proc("%s/initial_indexed.xyz"%path)
     final = tools.file_proc("%s/final_indexed.xyz"%path)
@@ -29,7 +29,7 @@ def main(path, prebombard = False):
 
     ########################### Fetching indexes from inital xyz ######################    
     
-    initial_atoms_arr, region_indexes = tools.region_assign(initial)
+    initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
 
     ########################### Finding heights of diamond and layers ######################
 
@@ -51,13 +51,7 @@ def main(path, prebombard = False):
     atoms = max(indexes)
     final_atoms_arr = final_atoms_arr[:atoms+1, :]
 
-    if prebombard == True:
-        zs = sorted([final_atoms_arr[i][-1] for i in range(final_atoms_arr.shape[0])])
-        diamond_surface_zs = zs[0:100]
-
-        surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])
-
-    else:
+    if loaded == False:
         diamond_surface_zs = [final_atoms_arr[index][-1] for index in region_indexes['diamond_surface']]
 
         surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])
@@ -74,79 +68,122 @@ def main(path, prebombard = False):
             except KeyError:
                 break
 
+
+    else: #averages top 100 atoms for loaded sims
+        carbon_zs = [final_atoms_arr[index][-1] for index in region_indexes['diamond_bulk']]
+
+        diamond_surface_zs = sorted(carbon_zs)[0:100]
+
+        surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
     
+
     ########################### Getting Pentration Depths ###########################
 
-    deuterium_zs = [i[-1] for i in final_atoms_arr if i[0] == 2]
-    print(deuterium_zs)
-    tritium_zs = [i[-1] for i in final_atoms_arr if i[0] == 3]
-    print(tritium_zs)
+  
+    zs = [[],[],[],[],[]]
+    for atom in final_atoms_arr:
+        zs[int(atom[0])].append(atom[-1])
 
-    d_diamond_pen = [z - surfaces['diamond_surface'][0] for z in deuterium_zs]
-    t_diamond_pen = [z - surfaces['diamond_surface'][0] for z in tritium_zs]
-    print(d_diamond_pen)
+    diamond_pens = [[],[],[],[],[]]
+    for atom_type in range(0,5):
+        diamond_pens[atom_type] = [z - surfaces['diamond_surface'][0] for z in zs[atom_type]]
+        
 
-    if prebombard == False:
-        for i in range(1,100):
-            layer_key = 'graphene_%s'%i
+    for i in range(1,100):
+        layer_key = 'graphene_%s'%i
 
-            try:            
-                if len(region_indexes[layer_key]) == 0:
-                    top_layer = 'diamond_surface'
-                    break
-
-
-            except KeyError:
-                top_layer = 'graphene_%s'%(i-1)
+        try:            
+            if len(region_indexes[layer_key]) == 0:
+                top_layer = 'diamond_surface'
                 break
 
-    surface_pen = [z - surfaces[top_layer][0] for z in deuterium_zs]
-    d_diamond_avg_pen = tools.avg(d_diamond_pen)
-    t_diamond_avg_pen = tools.avg(t_diamond_pen)
-    surface_avg_pen = tools.avg(surface_pen)
- 
 
+        except KeyError:
+            top_layer = 'graphene_%s'%(i-1)
+            break
+
+
+    surface_pens = [[],[],[],[],[]]
+    for atom_type in range(0,5):
+        surface_pens[atom_type] = [z - surfaces[top_layer][0] for z in zs[atom_type]]
+
+    
+
+  
 
     ####################### Getting Regions ##########################
 
-    region_count = dict(diamond_bulk = 0, on_surface = 0 )
-    for key in surfaces:
-        region_count[key] = 0
 
-
-    for z in deuterium_zs:
-
-        if z - surfaces['diamond_surface'][0] > 0:
-            region_count['diamond_bulk'] += 1
+    #creating dicts of counters for different regions and different atoms
+    region_counters = []
+    for atom_type in range(0,5):
+        region_count = dict(diamond_bulk = 0, on_surface = 0 )
+    
+        for key in surfaces:
+            region_count[key] = 0
         
-        elif z - surfaces[top_layer][0] < 0:
-            region_count['on_surface'] += 1
-
-        else:
-            for key, surface in surfaces.items():
-                if z - surface[0] > 0:
-                    region_count[key] += 1
-                    break
+        region_counters.append(region_count)
 
 
+    #filling counters with atoms in different regions
+    for atom_type in range (2,5): 
+        for z in zs[atom_type]: 
 
+            if z - surfaces['diamond_surface'][0] > 0:
+                region_counters[atom_type]['diamond_bulk'] += 1
+            
+            elif z - surfaces[top_layer][0] < 0:
+                region_counters[atom_type]['on_surface'] += 1
+
+            else:
+                for key, surface in surfaces.items():
+                    if z - surface[0] > 0:
+                        region_counters[atom_type][key] += 1
+                        break
+
+
+
+
+
+
+
+    ################# Constructing results text file ####################
 
     results = ''
-    results += f'\n\nAverage Surface Pen: {surface_avg_pen[0]:.4g} ± {surface_avg_pen[1]:.1g}'
-    results += f'\nAverage Diamond Pen: {diamond_avg_pen[0]:.4g} ± {diamond_avg_pen[1]:.1g}\n'
+   
+ 
+    for atom_type in range (2,5):
+        average, stderr = tools.avg(diamond_pens[atom_type])
+        results += f'\nIon {atom_type} Average Diamond Pen: '
+        results += f'{average:.4g} ± {stderr:.1g}\n'
 
-    for key, i in region_count.items():
-        if key != 'diamond_surface':
-            results += f'\nAtoms loctions: {key} - {i} atoms.'
+        average, stderr = tools.avg(surface_pens[atom_type])
+        results += f'Ion {atom_type} Average Surface Pen: '
+        results += f'{average:.4g} ± {stderr:.1g}\n'
+
+
+    for atom_type in range(2,5):
+        region_count = region_counters[atom_type]
+        for key, i in region_count.items():
+            if key != 'diamond_surface' and key != 'atom_type':
+                results += f'\nIon type {atom_type} locations: {key} - {i} atoms.'
+        results += '\n'
         
     results += '\n'
+    
     for key in surfaces:
-        results += f"\n{key} height: {surfaces[key][0]:.4g} ± {surfaces[key][1]:.1g}"
+        try:
+            results += f"\n{key} height: {surfaces[key][0]:.4g} ± {surfaces[key][1]:.1g}"
+        except TypeError:
+            pass
+    
 
-    results += '\n\nSurface Pens:\n'
-    results += str(surface_pen)
-    results += '\n\nDiamond Pens:\n'
-    results += str(d_diamond_pen)
+    for atom_type in range (2,5):
+        results += f'\n\nIon {atom_type} diamond pens: '
+        results += f'\n{diamond_pens[atom_type]}'
+
+        results += f'\n\nIon {atom_type} surface pens: '
+        results += f'\n{surface_pens[atom_type]}'
 
 
    ################# Producing Plots and Saving Results #####################
@@ -159,28 +196,42 @@ def main(path, prebombard = False):
     with open("%s/depth_results/depth.txt"%path, 'w') as fp: #rewriting edited input file
         fp.write(results)
 
+    
     fig = plt.figure()
-    plt.hist(surface_pen)
+    
+    for atom_type in range (2,5):
+        plt.hist(surface_pens[atom_type])
+        
+    plt.legend(["Ion type 2", "Ion type 3", "Ion type 4"])
     plt.xlabel("Surface Penetration / Å")
     plt.savefig("%s/depth_results/surface.png"%path)
     plt.close(fig)
+    
 
     fig = plt.figure()
-    plt.hist(d_diamond_pen)
-    plt.xlim(-1, 2 + max(d_diamond_pen))
+
+    for atom_type in range (1,5):
+        plt.hist(diamond_pens[atom_type])
+
+    plt.legend(['Carbon', "Ion type 2", "Ion type 3", "Ion type 4"])
     plt.xlabel("Diamond Penetration / Å")
     plt.savefig("%s/depth_results/diamond.png"%path)
     plt.close(fig)    
 
-    regions = [key  for key in region_count]
-    counts = [count for key, count in region_count.items()]
     
     fig = plt.figure()
-    plt.bar(regions, counts)
+    for atom_type in range(2,5):
+        region_count = region_counters[atom_type]
+        regions = [key  for key in region_count]
+        counts = [count for key, count in region_count.items()]
+    
+        plt.bar(regions, counts)
+
+    plt.legend(["Ion type 2", "Ion type 3", "Ion type 4"])
     plt.savefig("%s/depth_results/regions.png"%path)
     plt.close(fig)
 
-
+    
 
 
 
@@ -201,7 +252,7 @@ if __name__ == "__main__":
     path = current_dir + '/results/' +  dir_name
 
     try:
-        main(path, prebombard= prebombard)
+        main(path, loaded = prebombard)
 
     except FileNotFoundError:
         print("\n\n")

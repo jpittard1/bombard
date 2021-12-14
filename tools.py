@@ -14,7 +14,7 @@ def file_proc(file):
 
 
 
-def region_assign(initial):
+def region_assign(initial, loaded = False):
 
     initial_atoms_arr = np.zeros([5000,4])
     indexes = []
@@ -31,22 +31,27 @@ def region_assign(initial):
             initial_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), z]) 
             indexes.append(index)
 
-            if z == 0:
-                region_indexes['diamond_surface'].append(index)
+            if loaded == False:
+                if z == 0:
+                    region_indexes['diamond_surface'].append(index)
 
-            if z > 0:
-                region_indexes['diamond_bulk'].append(index)
-            
-            if z < 0:
-                region_indexes['graphene_all'].append(index)
+                if z > 0:
+                    region_indexes['diamond_bulk'].append(index)
                 
-                layer = -int((z - 1.675)/3.35)
-                layer_key = 'graphene_%s'%layer
+                if z < 0:
+                    region_indexes['graphene_all'].append(index)
+                    
+                    layer = -int((z - 1.675)/3.35)
+                    layer_key = 'graphene_%s'%layer
 
-                try:
-                    region_indexes[layer_key].append(index)
-                except KeyError:
-                    region_indexes[layer_key] = [index]
+                    try:
+                        region_indexes[layer_key].append(index)
+                    except KeyError:
+                        region_indexes[layer_key] = [index]
+            
+            else:
+                if atom_type_no == 1:
+                    region_indexes['diamond_bulk'].append(index)
     
     
     atoms = max(indexes)

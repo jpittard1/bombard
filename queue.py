@@ -17,9 +17,13 @@ import tools
 dir_path = os.path.dirname(os.path.realpath(__file__))
 lammps_files_path = "%s/LAMMPS_files"%dir_path
 input_file_name = 'in.multi_bombard'
-input_file_name = 'in.loaded_multi_bombard'
+#input_file_name = 'in.loaded_multi_bombard'
 data_file_name = 'data.graphite_sheet'
 results_dir_name = 'results'
+loaded = False
+
+if loaded == True:
+    replicate = ['8','8','6']
 
 energy = 100
 
@@ -55,9 +59,6 @@ if test == True:
 in_file = tools.file_proc("%s/%s"%(lammps_files_path, input_file_name))           
 
 paths = []
-replicate = None
-replicate = ['8','8','6']
-
     
 new = ''
 for i in in_file: #goes through the input file line by line both reading and editing
