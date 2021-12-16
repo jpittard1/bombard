@@ -20,12 +20,13 @@ import tools
 import numpy as np
 import matplotlib.pylab as plt
 
-def main(path, loaded = False):
+def main(path):
 
     initial = tools.file_proc("%s/initial_indexed.xyz"%path)
     final = tools.file_proc("%s/final_indexed.xyz"%path)
     
     settings_dict = tools.csv_reader("%s/settings.csv"%path)
+    loaded = settings_dict['loaded']
 
     ########################### Fetching indexes from inital xyz ######################    
     
@@ -241,18 +242,11 @@ if __name__ == "__main__":
 
     dir_name = sys.argv[1]
 
-    try:
-        if sys.argv[2] == 'True':
-            prebombard = True
-    except IndexError:
-        print("\n\nNo Tritium.\n")
-        prebombard = False
-
 
     path = current_dir + '/results/' +  dir_name
 
     try:
-        main(path, loaded = prebombard)
+        main(path)
 
     except FileNotFoundError:
         print("\n\n")

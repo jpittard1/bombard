@@ -16,27 +16,23 @@ import tools
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 lammps_files_path = "%s/LAMMPS_files"%dir_path
-input_file_name = 'in.multi_bombard'
-#input_file_name = 'in.loaded_multi_bombard'
-data_file_name = 'data.graphite_sheet'
 results_dir_name = 'results'
-loaded = False
+loaded = True
+energy = 100
+test = True
+hpc = True  
 
 if loaded == True:
     replicate = ['8','8','6']
-
-energy = 100
-
-
+    input_file_name = 'in.loaded_multi_bombard'
+else:
+    input_file_name = 'in.multi_bombard'
 
 pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
 bomb_run_val = "100" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
 number_of_particles = '375' #bombarding
-test = True
-
-hpc = True  
 
 if test == True:
     number_of_particles = '5'
@@ -48,9 +44,6 @@ if test == True:
 
 
 
-
-
-
 ##################################################################################
 ######################## Reading and Editing Input File ##########################
 ##################################################################################
@@ -59,6 +52,7 @@ if test == True:
 in_file = tools.file_proc("%s/%s"%(lammps_files_path, input_file_name))           
 
 paths = []
+data_files = []
     
 new = ''
 for i in in_file: #goes through the input file line by line both reading and editing
@@ -85,11 +79,15 @@ for i in in_file: #goes through the input file line by line both reading and edi
             
             file_path = i[1].split('/')
 
-            if file_path[-1] == 'data.diamond':
-                i[1] = "%s/data.diamond"%lammps_files_path
+            if file_path[-1][:5] == 'data.':
+                i[1] = f"{lammps_files_path}/{file_path[-1]}"
+                data_files.append(file_path[-1])
+
+            #if file_path[-1] == 'data.diamond':
+            #    i[1] = "%s/data.diamond"%lammps_files_path
                 
-            if file_path[-1] == 'data.graphite_sheet':
-                i[1] = "%s/data.graphite_sheet"%lammps_files_path
+            #if file_path[-1] == 'data.graphite_sheet':
+            #    i[1] = "%s/data.graphite_sheet"%lammps_files_path
                 
         
             in_file[index] = seperator.join(i)
@@ -234,7 +232,9 @@ while True: #creating new directory
     except FileExistsError:
         count += 1  
 
-shutil.copyfile("%s/data.graphite_sheet"%lammps_files_path, "%s/data.graphite_sheet"%new_path)
+for data_file in data_files:
+    shutil.copyfile(f"{lammps_files_path}/{data_file}", f"{new_path}/{data_file}")
+    
 shutil.copyfile("%s/%s"%(lammps_files_path, input_file_name), "%s/%s"%(new_path, input_file_name))
 
 
@@ -248,6 +248,7 @@ settings_dict = dict(no_bombarding_atoms = number_of_particles,
                     atom_type = atom_type,
                     pre_bombard_time = pre_bomb_run_val,
                     bombard_time = bomb_run_val,
+                    loaded = loaded
                     )
 
 tools.cvs_maker(new_path,settings_dict)
