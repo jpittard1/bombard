@@ -57,7 +57,6 @@ def main(path):
     
     settings_dict = csv_reader("%s/settings.csv"%settings_path)
 
-
     frames = []
 
     jmol_all_xyz = open(path, 'r')
@@ -96,7 +95,7 @@ def main(path):
 
             if line[0] == '3':
                 t_counter += 1
-                print(frame[i2])
+           
 
         results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter])
 
@@ -105,8 +104,10 @@ def main(path):
     except FileExistsError:
         pass
 
+    results_str = 'time, bombard_attempts, d_counter, t_counter\n' + str(results_arr)
+
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file
-        fp.write(str(results_arr))
+        fp.write(str(results_str))
 
     times = results_arr[:,0].flatten()
     attempts = results_arr[:,1].flatten()

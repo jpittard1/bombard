@@ -123,6 +123,16 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
             in_file[index] = seperator.join(i)
 
+        if i[0] == "create_atoms":
+
+            if atom_type == 'd':
+                i[1] = '2'
+
+            if atom_type == 't':
+                i[1] = '3'
+            
+            in_file[index] = seperator.join(i)
+
 
 
         if i[0] == "fix" and len(i[-1]) == 5: #changing random seed for each repeat
@@ -202,12 +212,7 @@ with open("%s/%s"%(lammps_files_path,input_file_name), 'w') as fp: #rewriting ed
 #########################################################################################
 
 
-if atom_type == 'h':
-    atom_mass = 1.0079
-if atom_type == 'd':
-    atom_mass = 2.0014
-if atom_type == 't':
-    atom_mass = 3.0160
+
 
 #writes graphene data sheet for the specific simulation
 #returns dictionary containing the number of bulk atoms in each region
@@ -221,7 +226,11 @@ bulk_atoms_dict = gmak.main(data_file_path = "%s/data.graphite_sheet"%lammps_fil
 count = 1
 while True: #creating new directory 
     try:
-        new_path = "%s/%s/%s_%sg_%s_%s_%s"%(dir_path, results_dir_name, atom_type, int(graphite_sheets), 
+        if loaded == False:
+            new_path = "%s/%s/%s_%sg_%s_%s_%s"%(dir_path, results_dir_name, atom_type, int(graphite_sheets), 
+                                            f"{energy}eV", number_of_particles, count)
+        else:
+            new_path = "%s/%s/%s_loaded_%s_%s_%s"%(dir_path, results_dir_name, atom_type, 
                                             f"{energy}eV", number_of_particles, count)
         os.mkdir(new_path)
         paths.append(new_path)
