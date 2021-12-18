@@ -13,11 +13,16 @@ import tools
 ##################### USER INPUTS, see README file. #############################
 #################################################################################
 
+print("\n\nPROGRESS: Running queue.py")
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 lammps_files_path = "%s/LAMMPS_files"%dir_path
+
+#these settings below should all be elsewhere really
+#maybe a seperate input file? as there are multiple LAMMPS ones
+
 results_dir_name = 'results'
-loaded = True
+loaded = False
 energy = 100
 test = True
 hpc = True  
@@ -83,12 +88,6 @@ for i in in_file: #goes through the input file line by line both reading and edi
                 i[1] = f"{lammps_files_path}/{file_path[-1]}"
                 data_files.append(file_path[-1])
 
-            #if file_path[-1] == 'data.diamond':
-            #    i[1] = "%s/data.diamond"%lammps_files_path
-                
-            #if file_path[-1] == 'data.graphite_sheet':
-            #    i[1] = "%s/data.graphite_sheet"%lammps_files_path
-                
         
             in_file[index] = seperator.join(i)
 
@@ -179,14 +178,6 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
             in_file[index] = seperator.join(i)
 
-        #elif i[0] == 'run' and len(i) == 2:
-
-         #   print(i)
-          #  print(len(i))
-
-
-           # post_bomb_val = i[1]
-            #in_file[index] = seperator.join(i)
 
     except IndexError:                                    
         pass
@@ -196,7 +187,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
 with open("%s/%s"%(lammps_files_path,input_file_name), 'w') as fp: #rewriting edited input file
     fp.write(str(new)) 
 
-    print("NEW IN FILE: %s/%s"%(lammps_files_path,input_file_name))
+print("\n\nPROGRESS: New input file generated.")
 
 
 #########################################################################################
@@ -222,6 +213,7 @@ with open("%s/%s"%(lammps_files_path,input_file_name), 'w') as fp: #rewriting ed
 bulk_atoms_dict = gmak.main(data_file_path = "%s/data.graphite_sheet"%lammps_files_path, no_bombarding_atoms = number_of_particles, 
                             replicate = replicate, no_of_sheets = graphite_sheets, atom_mass = atom_mass)
 
+print("\n\nPROGRESS: Graphene Data file generated.")
 
 count = 1
 while True: #creating new directory 
@@ -234,8 +226,6 @@ while True: #creating new directory
                                             f"{energy}eV", number_of_particles, count)
         os.mkdir(new_path)
         paths.append(new_path)
-        #if count == 1:
-        #    progress_markers_paths.append(new_path)
         break
 
     except FileExistsError:
@@ -291,12 +281,9 @@ if hpc == False and test == False:
     os.chdir(new_path)    
     os.system("mpiexec -n 2 lmp_serial -in %s/%s"%(lammps_files_path, input_file_name))
 
+print("\n\nPROGRESS: Simulation job submitted.")
+
 ###################################################################################
-
-
-
-
-
 
 
 

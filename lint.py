@@ -23,6 +23,8 @@ class Reader:
         
     def log(self): #not currently being used
 
+        print("\n\nPROGRESS: Reading log file.")
+
         if self.log_file_path != None:
 
             try:
@@ -64,7 +66,7 @@ class Reader:
                             rows.append(row)
                         except ValueError:
                             data = False
-                            print(f"Could not read row: \n{row}")
+                            print(f"ERROR: Could not read row: \n{row}")
                             
                         
 
@@ -91,6 +93,8 @@ class Reader:
             print("\nERROR: No log file found.\n")
 
     def data(self):
+
+        print("\n\nPROGRESS: Reading data file.")
 
         if self.data_file_path != None:
             data_file = open(self.data_file_path, 'r')
@@ -177,6 +181,8 @@ class Reader:
             print("\nERROR: No data file found.\n")
     
     def input(self):
+
+        print("\n\nPROGRESS: Reading input file.")
 
         if self.in_file_path != None:
 
@@ -362,9 +368,6 @@ class XYZ():
         
         dump = self.data_obj.dump #could be the issue with missing files, ie looking at wrong dump?
         steps = self.data_obj.Step
-        print(steps[0:10])
-        print(len(steps))
-        print(steps[-1])
    
         path = self.user_options.path
 
@@ -374,15 +377,12 @@ class XYZ():
 
         rem = upper_lim%dump
         last_whole_step = upper_lim - rem #mayeb this is wrong?
-        print(f"Upperlim: {upper_lim}")
-        print(f"rem: {rem}")
-        print(f"last_whiole_step: {last_whole_step}")
 
         data = ''
         files_found = False
 
         for i in range (0,int(last_whole_step+dump),dump):
-            print(f"{i} out of {last_whole_step}")
+
             try:
                 next_file = open("%s/%s.xyz"%(path,i), "r")
                 files_found = True
@@ -452,8 +452,7 @@ def main(path = None, in_file = None, data_file = None, variable = None, reduce_
 
         #moving relevent files into the new directory
 
-        print("\nComplete.\n")
-        print("Directory Name: %s"%user_options.path)
+        print("\n\nDirectory Name: %s"%user_options.path)
 
     dir_name = user_options.path.split('/')[-1]
     os.system("echo '%s' | pbcopy" % dir_name)
@@ -464,6 +463,8 @@ if __name__ == "__main__":
     #just open the file_paths.txt
     #maybe have an arguement to run another
 
+    print("\n\nPROGRESS: Running lint.py")
+
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     paths_txt = open("%s/results/file_path.txt"%dir_path, 'r')
@@ -473,11 +474,18 @@ if __name__ == "__main__":
 
     path = paths_list[0]
 
-    try:
-        path = "%s/results/%s"%(dir_path, sys.argv[1])
+    #try:
+     #   path = "%s/results/%s"%(dir_path, sys.argv[1])
+    #except IndexError:
+     #   pass
+
+    run_all = False
+    try: 
+        if sys.argv[1] == 'True' or sys.argv[1] == 'true':
+            run_all = True
     except IndexError:
         pass
-
+    
 
     dir_list = os.listdir(path)
     for file_name in dir_list:
@@ -488,5 +496,21 @@ if __name__ == "__main__":
 
     main(path = path, in_file="%s/%s"%(path, in_file), data_file = "%s/data.graphite_sheet"%path,
         reduce_size= False)
+
+    print("\n\nProgress: log interpretter is complete.")
+    print("\n", "-"*20, '\n')
+
+    if run_all == True:
+
+        print("\n\nPROGRESS: Running all analysis files.")
+
+        file_name = path.split('/')[-1]
+        os.system(f"python jmol_convert.py {file_name}")
+        os.system(f"python depth.py {file_name}")
+        os.system(f"python damage.py {file_name}")
+        os.system(f"python saturate.py {file_name}")
+
+
+
 
  

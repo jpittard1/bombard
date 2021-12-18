@@ -15,7 +15,7 @@ def file_proc(file):
 
 
 def region_assign(initial, loaded = False):
-
+        
     initial_atoms_arr = np.zeros([5000,4])
     indexes = []
 
@@ -31,7 +31,7 @@ def region_assign(initial, loaded = False):
             initial_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), z]) 
             indexes.append(index)
 
-            if loaded == False:
+            if loaded == False:        
                 if z == 0:
                     region_indexes['diamond_surface'].append(index)
 
@@ -100,13 +100,12 @@ def csv_reader(csv_path):
 
     for i in settings_str:
         try:
-            i = i.split(';')
+            i = i.split('; ')
             key, item = i
         except ValueError:
             break
 
         while True:
-            print("Item: %s"%item)
 
             try:
                 item = float(item) 
@@ -119,11 +118,11 @@ def csv_reader(csv_path):
                 dict_item = dict()
                 item = item.replace("{", "")
                 item = item.replace("}", "")
-                item = item.split(',')
-
+                item = item.split(', ')
+                
                 for subitem in item:
-                    key, value = subitem.split(':')
-                    dict_item[key, value]
+                    key, value = subitem.split(': ')
+                    dict_item[key] = value
 
                 item = dict_item
                 break
@@ -147,6 +146,5 @@ def csv_reader(csv_path):
 
         settings_dict[key] = item
 
-    print(settings_dict)
     return settings_dict
 

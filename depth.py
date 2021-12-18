@@ -22,11 +22,19 @@ import matplotlib.pylab as plt
 
 def main(path):
 
+    print("\n\nPROGRESS: Running depth.py.") 
+
     initial = tools.file_proc("%s/initial_indexed.xyz"%path)
     final = tools.file_proc("%s/final_indexed.xyz"%path)
     
     settings_dict = tools.csv_reader("%s/settings.csv"%path)
-    loaded = settings_dict['loaded']
+
+    loaded = False
+    try: #allows code to be used for olded simulations when loaded wasnt in settings
+        if settings_dict['loaded'] == "True":
+            loaded = True
+    except KeyError:
+        pass
 
     ########################### Fetching indexes from inital xyz ######################    
     
@@ -34,7 +42,7 @@ def main(path):
 
     ########################### Finding heights of diamond and layers ######################
 
-
+    print("\n\nPROGRESS: Determining heights of surfaces.") 
 
     final_atoms_arr = np.zeros([10000,4])
     indexes = []
@@ -80,6 +88,8 @@ def main(path):
 
     ########################### Getting Pentration Depths ###########################
 
+    print("\n\nPROGRESS: Getting penetration depths.") 
+
   
     zs = [[],[],[],[],[]]
     for atom in final_atoms_arr:
@@ -114,6 +124,7 @@ def main(path):
 
     ####################### Getting Regions ##########################
 
+    print("\n\nPROGRESS: Getting Regions.") 
 
     #creating dicts of counters for different regions and different atoms
     region_counters = []
@@ -149,6 +160,8 @@ def main(path):
 
 
     ################# Constructing results text file ####################
+
+    print("\n\nPROGRESS: Generating results.txt and graphs.") 
 
     results = ''
    
@@ -247,6 +260,8 @@ if __name__ == "__main__":
 
     try:
         main(path)
+        print("\n\nProgress: depth calculations complete.")
+        print("\n", "-"*20, '\n')
 
     except FileNotFoundError:
         print("\n\n")

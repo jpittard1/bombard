@@ -43,6 +43,8 @@ class Frame():
 
 def main(all_xyz_file_path):
 
+    print("\n\nPROGRESS: Running jmol_convert.py") 
+
     try:
         split = sys.argv[2]
     except IndexError:
@@ -104,6 +106,7 @@ def main(all_xyz_file_path):
     for frame in frames:
         jmol_str += frame.present_arr(jmol=True)
 
+    print("\n\nPROGRESS: Generating xyz files.") 
 
     with open("%s/jmol_all.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(jmol_str)
@@ -138,6 +141,8 @@ if __name__ == "__main__":
 
     try:
         main(path)
+        print("\n\nProgress: jmol convert complete.")
+        print("\n", "-"*20, '\n')
 
     except FileNotFoundError:
         print("\n\n")

@@ -47,6 +47,8 @@ def bombard_attempts_calc(settings_dict, time, final = False):
 
 def main(path):
 
+    print("\n\nPROGRESS: Running saturate.py.") 
+
     dir_path = path.split('/')[:-1]
 
     settings_path = ''
@@ -67,6 +69,8 @@ def main(path):
     results_arr = np.zeros([len(jmol_all_xyz) - 1, 4])
 
     final = False
+
+    print("\n\nPROGRESS: Counting atoms.") 
 
     for i1, frame in enumerate(jmol_all_xyz):
         
@@ -104,6 +108,8 @@ def main(path):
     except FileExistsError:
         pass
 
+    print("\n\nPROGRESS: Generating results.txt and graphs.") 
+
     results_str = 'time, bombard_attempts, d_counter, t_counter\n' + str(results_arr)
 
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file
@@ -137,6 +143,9 @@ if __name__ == "__main__":
 
     try:
         main(path)
+        print("\n\nProgress: saturate calculations complete.")
+        print("\n", "-"*20, '\n')
+
 
     except FileNotFoundError:
         print("\n\n")
