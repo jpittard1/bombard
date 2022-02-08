@@ -8,7 +8,7 @@
 #TODO Checks
     #Check times add up to final
     #Find reasonable way of dictateing when it is not in the diamond other than just counting particles in the box
- 
+    # Would be better to get all of the files read in lint and then fed into each of them? although couldnt run individually, maybe just a tools function
 
 
 import sys
@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tools import csv_reader
+import tools
 
 
 
@@ -59,7 +59,7 @@ def main(path):
         settings_path += i
 
     
-    settings_dict = csv_reader("%s/settings.csv"%settings_path)
+    settings_dict = tools.csv_reader("%s/settings.csv"%settings_path)
 
     frames = []
 
@@ -71,6 +71,38 @@ def main(path):
     results_arr = np.zeros([len(jmol_all_xyz) - 1, 4])
 
     final = False
+
+    ################# Determining Surface ##################
+
+    print("\n\nPROGRESS: Determining Surface.") 
+
+    initial = tools.file_proc(f"{settings_path}/initial_indexed.xyz")
+
+    final_arr = tools.xyz_to_array(f"{settings_path}/final_indexed.xyz")
+    
+
+    loaded = False
+
+    try: #allows code to be used for olded simulations when loaded wasnt in settings
+        if settings_dict['loaded'] == "True":
+            loaded = True
+    except KeyError:
+        pass
+
+    initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
+
+    carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk']]
+
+    diamond_surface_zs = sorted(carbon_zs)[0:100]
+
+    surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
+
+    surface_limit = surfaces["diamond_surface"][0] - 0*3.567
+
+
+
+    ##############################################################################
+
 
     print("\n\nPROGRESS: Counting atoms.") 
 
@@ -96,12 +128,12 @@ def main(path):
         for i2 in range(0,len(frame)):
             line = frame[i2].split(' ')
            
-            if line[0] == '2':
+            if line[0] == '2' and float(line[-1]) > surface_limit:
                 d_counter += 1
 
-            if line[0] == '3':
+            if line[0] == '3' and float(line[-1]) > surface_limit:
                 t_counter += 1
-           
+        
 
         results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter])
 
@@ -116,6 +148,7 @@ def main(path):
 
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file
         fp.write(str(results_str))
+
 
     times = results_arr[:,0].flatten()
     attempts = results_arr[:,1].flatten()

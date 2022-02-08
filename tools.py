@@ -1,4 +1,5 @@
 
+from asyncore import file_dispatcher
 import numpy as np
 import math
 
@@ -11,6 +12,28 @@ def file_proc(file):
     opened_file = opened_file.split("\n")
     return opened_file
 
+
+
+def xyz_to_array(xyz_file_path):
+
+    xyz_file = file_proc(f"{xyz_file_path}")
+
+    atoms_arr = np.zeros([10000,4])
+    indexes = []
+
+    for i in xyz_file:
+        line = i.split()
+        if len(line) == 5: #store in array much faster
+     
+            index = int(line[0]) - 1 #so atom 1 is at 0th index
+            atom_type_no = int(line[1])
+            atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
+            indexes.append(index)
+
+    atoms = max(indexes)
+    atoms_arr = atoms_arr[:atoms+1, :]
+
+    return atoms_arr
 
 
 
