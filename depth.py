@@ -13,6 +13,8 @@
 #TODO Checks:
     # Check number of bombarding atoms is less than that in regions
     # or nuumber of boombarding atoms in final is eqaul to total of regions
+    # Compare changing in carbon atom poistions
+    # Way of tracking errosion? difference between initial surface hight and final for diamond
 
 import os
 import sys
@@ -25,7 +27,7 @@ def main(path):
     print("\n\nPROGRESS: Running depth.py.") 
 
     initial = tools.file_proc("%s/initial_indexed.xyz"%path)
-    final = tools.file_proc("%s/final_indexed.xyz"%path)
+    final_arr = tools.xyz_to_array("%s/final_indexed.xyz"%path)
     
     settings_dict = tools.csv_reader("%s/settings.csv"%path)
 
@@ -44,24 +46,8 @@ def main(path):
 
     print("\n\nPROGRESS: Determining heights of surfaces.") 
 
-    final_atoms_arr = np.zeros([10000,4])
-    indexes = []
-
-    for i in final:
-        line = i.split()
-        if len(line) == 5: #store in array much faster
-     
-            index = int(line[0]) - 1 #so atom 1 is at 0th index
-            atom_type_no = int(line[1])
-            z = float(line[4])
-            final_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), z]) 
-            indexes.append(index)
-
-    atoms = max(indexes)
-    final_atoms_arr = final_atoms_arr[:atoms+1, :]
-
     if loaded == False:
-        diamond_surface_zs = [final_atoms_arr[index][-1] for index in region_indexes['diamond_surface']]
+        diamond_surface_zs = [final_arr[index][-1] for index in region_indexes['diamond_surface']]
 
         surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])
 
@@ -70,7 +56,7 @@ def main(path):
             layer_key = 'graphene_%s'%i
 
             try:
-                layer_zs = [final_atoms_arr[index][-1] for index in region_indexes[layer_key]]
+                layer_zs = [final_arr[index][-1] for index in region_indexes[layer_key]]
 
                 surfaces[layer_key] = tools.avg(layer_zs) 
 
@@ -79,7 +65,7 @@ def main(path):
 
 
     else: #averages top 100 atoms for loaded sims
-        carbon_zs = [final_atoms_arr[index][-1] for index in region_indexes['diamond_bulk']]
+        carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk']]
 
         diamond_surface_zs = sorted(carbon_zs)[0:100]
 
@@ -92,7 +78,7 @@ def main(path):
 
   
     zs = [[],[],[],[],[]]
-    for atom in final_atoms_arr:
+    for atom in final_arr:
         zs[int(atom[0])].append(atom[-1])
 
     diamond_pens = [[],[],[],[],[]]

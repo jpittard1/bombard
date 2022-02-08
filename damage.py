@@ -12,6 +12,11 @@
 # bombardment to see the thermal displacement and use as cut off
 
 
+#####TODO##########
+# Remove scale thermal distribution from histogram
+# Count vacancies - paper where they took any movemnt beyond some point
+
+
 import os
 from shutil import ExecError
 import sys
@@ -25,6 +30,7 @@ def main(path):
     
     initial = tools.file_proc("%s/initial_indexed.xyz"%path)
     equilibrium = tools.file_proc("%s/equilibrium_indexed.xyz"%path)
+    equilibrium_arr = tools.xyz_to_array("%s/equilibrium_indexed.xyz"%path)
     final = tools.file_proc("%s/final_indexed.xyz"%path)
 
 
@@ -55,25 +61,14 @@ def main(path):
     
     initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
 
-    equilibrium_atoms_arr = np.zeros([total_atoms,4])
     loaded_atoms_arr = np.zeros([total_atoms,4])
     indexes = []
     loaded_indexes = []
-
-    for i in equilibrium:
-        line = i.split()
-        if len(line) == 5: #store in array much faster
-            index = int(line[0]) - 1 #so atom 1 is at 0th index
-            atom_type_no = int(line[1])
-            equilibrium_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
-            indexes.append(index)
-
-            if atom_type_no != 1:
-                loaded_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
+    for index, atom in enumerate(equilibrium_arr):
+        if atom[0] != 1:
+                loaded_atoms_arr[index] = np.array([atom[0], atom[1], atom[2], atom[3]]) 
                 loaded_indexes.append(index)
 
-    atoms = max(indexes)
-    equilibrium_atoms_arr = equilibrium_atoms_arr[:atoms+1, :]
 
     if loaded == True:
         loaded_atoms_arr = loaded_atoms_arr[:max(loaded_indexes)+1, : ]
@@ -99,12 +94,9 @@ def main(path):
                 indexes.append(index)
 
             elif atom_type_no != implant_ion_type and atom_type_no != 0: #get from settings what the implant ion is
-                
-                if atom_type_no == 1:
-                    raise ExecError
-                else:
-                    loaded_final_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
-                    loaded_indexes.append(index)
+
+                loaded_final_atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
+                loaded_indexes.append(index)
 
 
     atoms = max(indexes)
@@ -129,7 +121,7 @@ def main(path):
     for key, indices in region_indexes.items():
  
         try:
-            displacements = [final_atoms_arr[index] - equilibrium_atoms_arr[index] for index in indices]
+            displacements = [final_atoms_arr[index] - equilibrium_arr[index] for index in indices]
             distances = [tools.magnitude(row[1:]) for row in displacements if tools.magnitude(row[1:]) < diamond_width]
 
             region_distances[key] = distances
