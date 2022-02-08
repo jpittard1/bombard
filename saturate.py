@@ -7,6 +7,8 @@
 
 #TODO Checks
     #Check times add up to final
+    #Find reasonable way of dictateing when it is not in the diamond other than just counting particles in the box
+ 
 
 
 import sys
@@ -122,9 +124,19 @@ def main(path):
 
     plt.plot(attempts, deuterium)
     plt.plot(attempts, tritium)
-    plt.ylabel("Bombarding Particles Remaining")
+    plt.legend(["Deuterium", "Tritium"])
+    plt.ylabel("Particles")
     plt.xlabel("Attempted Bombarding Particles")
     plt.savefig("%s/saturate_results/attempts.png"%settings_path)
+    plt.close()
+
+    plt.plot(times, deuterium)
+    plt.plot(times, tritium)
+    plt.legend(["Deuterium", "Tritium"])
+    plt.ylabel("Particles")
+    plt.xlabel("Time (ps)")
+    plt.savefig("%s/saturate_results/time.png"%settings_path)
+    plt.close()
 
 
 
