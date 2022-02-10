@@ -474,10 +474,10 @@ if __name__ == "__main__":
 
     path = paths_list[0]
 
-    #try:
-     #   path = "%s/results/%s"%(dir_path, sys.argv[1])
-    #except IndexError:
-     #   pass
+    try:
+        path = "%s/results/%s"%(dir_path, sys.argv[2])
+    except IndexError:
+        pass
 
     run_all = False
     try: 
