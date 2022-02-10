@@ -23,21 +23,25 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 
 results_dir_name = 'results'
 loaded = False
-energy = 100
+grain = True
+energy = 30
 test = True
 hpc = True  
 
 if loaded == True:
     replicate = ['8','8','6']
     input_file_name = 'in.loaded_multi_bombard'
+if grain == True:
+    replicate = ['1','1','1']
+    input_file_name = 'in.grain_multi_bombard'
 else:
     input_file_name = 'in.multi_bombard'
 
 pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
-bomb_run_val = "100" #this is automatically increase for slow particles and must be
+bomb_run_val = "3000" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
-number_of_particles = '375' #bombarding
+number_of_particles = '10' #bombarding
 
 if test == True:
     number_of_particles = '5'
@@ -60,6 +64,7 @@ paths = []
 data_files = []
     
 new = ''
+primary_data_file_bool = True
 for i in in_file: #goes through the input file line by line both reading and editing
     index = in_file.index(i)
     i = i.split()
@@ -91,7 +96,26 @@ for i in in_file: #goes through the input file line by line both reading and edi
         
             in_file[index] = seperator.join(i)
 
-        
+            if primary_data_file_bool == True:
+
+                primary_data_file = tools.file_proc(f"{lammps_files_path}/{file_path[-1]}")
+
+                for line in primary_data_file:
+                    line = line.split(" ")
+
+                    if line[-1] == 'xhi':
+                        prim_xlo, prim_xhi = [float(item) for item in line[0:2]]
+
+                    if line[-1] == 'yhi':
+                        prim_ylo, prim_yhi = [float(item) for item in line[0:2]]
+
+                    if line[-1] == 'zhi':
+                        prim_zlo, prim_zhi = [float(item) for item in line[0:2]]
+
+                    if line[0] == "Masses":
+                        break
+
+                primary_data_file_bool = False
 
         if i[0] == 'pair_coeff':
 
@@ -144,6 +168,34 @@ for i in in_file: #goes through the input file line by line both reading and edi
             i[4] = str(rand)
             in_file[index] = seperator.join(i)
 
+
+
+        #################Makes much more sense to pull these from limits in data file###################
+        ######## need to vary both regions not just box TODO
+        ##### This was done originally when using the replicate line, so maybe need to include some specification of loaded/single data file/no replicate used
+        ##### Or maybe it looks at first data file and takes the values, then have areplicate 1 1 1 lien which multplies it whatever
+
+
+        if i[0] == 'region' and i[1] == 'box': 
+
+            x_width = abs(prim_xhi - prim_xlo)
+            y_width = abs(prim_yhi - prim_ylo)
+
+            x_lo, x_hi = [prim_xlo, prim_xhi*float(replicate[0])]
+            y_lo, y_hi = [prim_ylo, prim_yhi*float(replicate[1])]
+
+            graphene_thickness = 3.35
+            z_hi = -graphene_thickness*graphite_sheets - 25
+            z_lo = z_hi - 30
+            
+            i = seperator.join(i[:3]) + " %s %s %s %s %s %s"%(x_lo, x_hi, y_lo, y_hi, z_lo, z_hi)
+
+            in_file[index] = i
+
+
+
+        '''
+
         if i[0] == 'region' and i[1] == 'box': #creating region for bombardment atom to be created
             central = True                      #this is adjusted for number of graphene sheets
             diamond_size = 3.567
@@ -165,6 +217,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
             i = seperator.join(i[:3]) + " %s %s %s %s %s %s"%(xlo, xhi, ylo ,yhi,zlo,zhi)
 
             in_file[index] = i
+        '''
 
         if i[0] == 'run' and i[2] == "#inbetween": 
             
