@@ -218,6 +218,21 @@ def main(path):
     plt.savefig("%s/depth_results/diamond.png"%path)
     plt.close(fig)    
 
+
+    fig = plt.figure()
+
+    initial_carbon_zs = [atom[-1] for atom in initial_atoms_arr if float(atom[0]) == 1]
+    final_carbon_zs = [atom[-1] for atom in final_arr if float(atom[0]) == 1]
+    print(len(initial_carbon_zs))
+    print(len(final_carbon_zs))
+    plt.hist(final_carbon_zs, bins = 25)
+    plt.hist(initial_carbon_zs, bins = 25)
+
+    plt.legend(['Carbon Initial', "Carbon Final"])
+    plt.xlabel("Z position / Å")
+    plt.savefig("%s/depth_results/diamond_movement.png"%path)
+    plt.close(fig)    
+
     
     fig = plt.figure()
     for atom_type in range(2,5):

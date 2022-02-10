@@ -13,6 +13,7 @@
 
 
 #####TODO##########
+#DOESNT WORK AS WHOLE SYSTEM SHIFTS SLIGHTLY AS COM CHANGES POSITION
 # Remove scale thermal distribution from histogram
 # Count vacancies - paper where they took any movemnt beyond some point
 
