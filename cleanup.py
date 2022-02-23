@@ -20,11 +20,6 @@ def main(path):
     
     if cont_yn == 'y':
         
-        os.remove("%s/initial.xyz"%path)
-        os.remove("%s/final.xyz"%path)
-        os.remove("%s/initial_indexed.xyz"%path)
-        os.remove("%s/final_indexed.xyz"%path)
-
         try:
             shutil.rmtree("%s/xyz_files"%path) 
         except FileNotFoundError:

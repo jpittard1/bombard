@@ -68,7 +68,7 @@ def main(path):
 
     jmol_all_xyz = jmol_all_xyz.split("\n\n")
 
-    results_arr = np.zeros([len(jmol_all_xyz) - 1, 4])
+    results_arr = np.zeros([len(jmol_all_xyz) - 1, 5])
 
     final = False
 
@@ -124,9 +124,13 @@ def main(path):
 
         d_counter = 0
         t_counter = 0
+        c_counter = 0
 
         for i2 in range(0,len(frame)):
             line = frame[i2].split(' ')
+
+            if line[0] == '1' and float(line[-1]) > surface_limit:
+                c_counter += 1
            
             if line[0] == '2' and float(line[-1]) > surface_limit:
                 d_counter += 1
@@ -135,7 +139,7 @@ def main(path):
                 t_counter += 1
         
 
-        results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter])
+        results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter, c_counter])
 
     try:
         os.mkdir("%s/saturate_results/"%settings_path)
@@ -152,19 +156,30 @@ def main(path):
 
     times = results_arr[:,0].flatten()
     attempts = results_arr[:,1].flatten()
+
+    try:
+        fluence = [i/float(settings_dict['surface_area']) for i in attempts]
+        x_title = "Fluence x10^20 ions/m^2"
+    except KeyError:
+        fluence = attempts
+        x_title = "Incident ions"
+
     deuterium = results_arr[:,2].flatten()
     tritium = results_arr[:,3].flatten()
+    carbon = results_arr[:,4].flatten()
 
-    plt.plot(attempts, deuterium)
-    plt.plot(attempts, tritium)
+    plt.plot(fluence, deuterium)
+    plt.plot(fluence, tritium)
+    plt.plot(fluence, carbon)
     plt.legend(["Deuterium", "Tritium"])
     plt.ylabel("Particles")
-    plt.xlabel("Attempted Bombarding Particles")
+    plt.xlabel(x_title)
     plt.savefig("%s/saturate_results/attempts.png"%settings_path)
     plt.close()
 
     plt.plot(times, deuterium)
     plt.plot(times, tritium)
+    plt.plot(times, carbon)
     plt.legend(["Deuterium", "Tritium"])
     plt.ylabel("Particles")
     plt.xlabel("Time (ps)")

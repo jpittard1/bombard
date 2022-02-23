@@ -1,6 +1,7 @@
 
 
 
+from importlib.resources import path
 import os 
 import time
 import shutil
@@ -8,6 +9,7 @@ import random
 
 import graphene_maker as gmak
 import tools
+import job_tracker
 
 #################################################################################
 ##################### USER INPUTS, see README file. #############################
@@ -24,8 +26,9 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 results_dir_name = 'results'
 loaded = False
 grain = True
+multi_bombard = False
 energy = 30
-test = True
+test = False
 hpc = True  
 
 if loaded == True:
@@ -34,7 +37,7 @@ if loaded == True:
 if grain == True:
     replicate = ['1','1','1']
     input_file_name = 'in.grain_multi_bombard'
-else:
+if multi_bombard == True:
     input_file_name = 'in.multi_bombard'
 
 pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
@@ -63,6 +66,9 @@ in_file = tools.file_proc("%s/%s"%(lammps_files_path, input_file_name))
 paths = []
 data_files = []
     
+
+#Better way would be to just turn every line into a dict, with the first word the key, then can look up
+
 new = ''
 primary_data_file_bool = True
 for i in in_file: #goes through the input file line by line both reading and editing
@@ -168,8 +174,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
             i[4] = str(rand)
             in_file[index] = seperator.join(i)
 
-
-
+    
         #################Makes much more sense to pull these from limits in data file###################
         ######## need to vary both regions not just box TODO
         ##### This was done originally when using the replicate line, so maybe need to include some specification of loaded/single data file/no replicate used
@@ -178,8 +183,8 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
         if i[0] == 'region' and i[1] == 'box': 
 
-            x_width = abs(prim_xhi - prim_xlo)
-            y_width = abs(prim_yhi - prim_ylo)
+            x_width = abs(prim_xhi - prim_xlo)*float(replicate[0])
+            y_width = abs(prim_yhi - prim_ylo)*float(replicate[1])
 
             x_lo, x_hi = [prim_xlo, prim_xhi*float(replicate[0])]
             y_lo, y_hi = [prim_ylo, prim_yhi*float(replicate[1])]
@@ -243,6 +248,7 @@ with open("%s/%s"%(lammps_files_path,input_file_name), 'w') as fp: #rewriting ed
 print("\n\nPROGRESS: New input file generated.")
 
 
+
 #########################################################################################
 
 
@@ -262,7 +268,7 @@ print("\n\nPROGRESS: New input file generated.")
 #returns dictionary containing the number of bulk atoms in each region
 #used for lattice displacement calculations
 
-
+###TODO bulk atoms dict incorrect (need to make it less reliant on replicate)
 bulk_atoms_dict = gmak.main(data_file_path = "%s/data.graphite_sheet"%lammps_files_path, no_bombarding_atoms = number_of_particles, 
                             replicate = replicate, no_of_sheets = graphite_sheets, atom_mass = atom_mass)
 
@@ -271,12 +277,18 @@ print("\n\nPROGRESS: Graphene Data file generated.")
 count = 1
 while True: #creating new directory 
     try:
-        if loaded == False:
+        if multi_bombard == True:
             new_path = "%s/%s/%s_%sg_%s_%s_%s"%(dir_path, results_dir_name, atom_type, int(graphite_sheets), 
                                             f"{energy}eV", number_of_particles, count)
-        else:
+        elif loaded == True:
             new_path = "%s/%s/%s_loaded_%s_%s_%s"%(dir_path, results_dir_name, atom_type, 
                                             f"{energy}eV", number_of_particles, count)
+
+        elif grain == True:
+            new_path = "%s/%s/%s_grain_%s_%s_%s"%(dir_path, results_dir_name, atom_type, 
+                                            f"{energy}eV", number_of_particles, count)
+
+        
         os.mkdir(new_path)
         paths.append(new_path)
         break
@@ -292,6 +304,7 @@ shutil.copyfile("%s/%s"%(lammps_files_path, input_file_name), "%s/%s"%(new_path,
 
 settings_dict = dict(no_bombarding_atoms = number_of_particles, 
                     replicate = replicate, 
+                    surface_area = float(x_width*y_width),
                     no_of_sheets = graphite_sheets, 
                     atom_mass = atom_mass,
                     diamond_type = diamond_type,
@@ -300,7 +313,10 @@ settings_dict = dict(no_bombarding_atoms = number_of_particles,
                     atom_type = atom_type,
                     pre_bombard_time = pre_bomb_run_val,
                     bombard_time = bomb_run_val,
-                    loaded = loaded
+                    loaded = loaded,
+                    grain = grain,
+                    multi_bombard = multi_bombard,
+                    data_files = data_files
                     )
 
 tools.cvs_maker(new_path,settings_dict)
@@ -336,12 +352,40 @@ if hpc == False and test == False:
 
 print("\n\nPROGRESS: Simulation job submitted.")
 
+folder_name = new_path.split('/')[-1]
+job_tracker.Track(folder_name)
+
+print("\n\nPROGRESS: jobs.txt updated.")
+
 ###################################################################################
 
 
 
+
+try:
+    file_paths = open(f"{dir_path}/results/file_path.txt", 'r')
+    file_paths = file_paths.read()
+
+    file_paths = file_paths[1:-1]
+    print(f"FILE PATH str: {file_paths}")
+
+    file_paths = file_paths.split(",")
+  
+    file_paths = [file_path.replace("'","") for file_path in file_paths]
+    file_paths = [file_path.replace(" ","") for file_path in file_paths]
+
+    print(f"FILE PATH LIST: {file_paths}")
+
+except FileNotFoundError:
+    file_paths = []
+
+file_paths += paths
+print(f"\n\n PATHS {paths}")
+
+
+
 with open("%s/%s/file_path.txt"%(dir_path, results_dir_name), 'w') as fp: #is this needed still?
-    fp.write(str(paths)) 
+    fp.write(str(file_paths)) 
 
 
 

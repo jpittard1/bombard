@@ -464,15 +464,18 @@ if __name__ == "__main__":
     #maybe have an arguement to run another
 
     print("\n\nPROGRESS: Running lint.py")
+    
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
+    '''
     paths_txt = open("%s/results/file_path.txt"%dir_path, 'r')
     paths_txt = paths_txt.read()
     paths_txt = paths_txt[2:-2]
     paths_list = paths_txt.split("', '")
 
     path = paths_list[0]
+    '''
 
     try:
         path = "%s/results/%s"%(dir_path, sys.argv[2])
@@ -511,6 +514,20 @@ if __name__ == "__main__":
         os.system(f"python saturate.py {file_name}")
 
 
+    file_paths = open(f"{dir_path}/results/file_path.txt", 'r')
+    file_paths = file_paths.read()
+
+    file_paths  = file_paths[1:-1]
+    file_paths = file_paths.split(",")
+
+    try:
+        file_paths = file_paths.remove(f"{path}")
+
+        with open(f"{dir_path}/results/file_path.txt", 'w') as fp: #is this needed still?
+            fp.write(str(file_paths)) 
+
+    except ValueError:
+        pass
 
 
- 
+    

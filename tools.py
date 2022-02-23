@@ -106,14 +106,18 @@ def input_misc(message, allowed_values):
     return option
 
  
-def cvs_maker(path, dictionary):
+def cvs_maker(path, dictionary, write = True):
     f = ''
 
     for key in dictionary:
         f += '%s; %s\n'%(key, dictionary[key])
 
-    with open ("%s/settings.csv"%path, 'w') as fp: #writing new data file
-        fp.write(f) 
+    if write == True:
+        with open ("%s/settings.csv"%path, 'w') as fp: #writing new data file
+            fp.write(f) 
+    
+    else:
+        return f
         
 
 def csv_reader(csv_path):
@@ -159,7 +163,10 @@ def csv_reader(csv_path):
 
                 item = item.split(',')
 
-                list_item = [float(subitem) for subitem in item]
+                try:
+                    list_item = [float(subitem) for subitem in item]
+                except ValueError:
+                    list_item = item
 
                 item = list_item
                 break
