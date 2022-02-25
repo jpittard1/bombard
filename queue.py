@@ -25,11 +25,11 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 
 results_dir_name = 'results'
 loaded = False
-grain = True
-multi_bombard = False
+grain = False
+multi_bombard = True
 energy = 30
 test = False
-hpc = True  
+hpc = False  
 
 if loaded == True:
     replicate = ['8','8','6']
@@ -38,13 +38,13 @@ if grain == True:
     replicate = ['1','1','1']
     input_file_name = 'in.grain_multi_bombard'
 if multi_bombard == True:
-    input_file_name = 'in.multi_bombard'
+    input_file_name = 'in.multi_bombard_para'
 
 pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
 bomb_run_val = "3000" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
-number_of_particles = '10' #bombarding
+number_of_particles = '5' #bombarding
 
 if test == True:
     number_of_particles = '5'
@@ -175,6 +175,22 @@ for i in in_file: #goes through the input file line by line both reading and edi
             in_file[index] = seperator.join(i)
 
     
+        if i[0] == "compute":
+            steinhardt_line = i
+            steinhardt_degrees = [4,6,8,10,12]
+
+            try:
+                if line[4] == 'degrees':
+                    steinhardt_degrees = [float(degree) for degree in line[5:]]
+
+            except IndexError or ValueError:
+                pass
+
+            in_file[index] = seperator.join(i)
+
+
+
+
         #################Makes much more sense to pull these from limits in data file###################
         ######## need to vary both regions not just box TODO
         ##### This was done originally when using the replicate line, so maybe need to include some specification of loaded/single data file/no replicate used
@@ -198,31 +214,6 @@ for i in in_file: #goes through the input file line by line both reading and edi
             in_file[index] = i
 
 
-
-        '''
-
-        if i[0] == 'region' and i[1] == 'box': #creating region for bombardment atom to be created
-            central = True                      #this is adjusted for number of graphene sheets
-            diamond_size = 3.567
-            graphene_thickness = 3.35
-
-            if central == True:
-                xlo, ylo = [float(replicate[i])*diamond_size*(-1) for i in range(0,2)]
-                xhi, yhi = [(float(replicate[i]) + 1)*diamond_size for i in range(0,2)]
-
-            else:
-                xlo = 0
-                xhi = float(replicate[0])*diamond_size
-                ylo = 0
-                yhi = float(replicate[1])*diamond_size
-
-            zhi = -graphene_thickness*graphite_sheets - 25
-            zlo = zhi - 30
-            
-            i = seperator.join(i[:3]) + " %s %s %s %s %s %s"%(xlo, xhi, ylo ,yhi,zlo,zhi)
-
-            in_file[index] = i
-        '''
 
         if i[0] == 'run' and i[2] == "#inbetween": 
             
@@ -250,11 +241,6 @@ print("\n\nPROGRESS: New input file generated.")
 
 
 #########################################################################################
-
-
-
-
-
 
 
 #########################################################################################
@@ -316,17 +302,14 @@ settings_dict = dict(no_bombarding_atoms = number_of_particles,
                     loaded = loaded,
                     grain = grain,
                     multi_bombard = multi_bombard,
-                    data_files = data_files
+                    data_files = data_files,
+                    steinhardt_degrees = steinhardt_degrees,
+                    steinhardt_line = steinhardt_line
                     )
 
 tools.cvs_maker(new_path,settings_dict)
 
 ##################################################################################
-
-
-
-
-
 
 
 ##################################################################################
@@ -352,10 +335,12 @@ if hpc == False and test == False:
 
 print("\n\nPROGRESS: Simulation job submitted.")
 
-folder_name = new_path.split('/')[-1]
-job_tracker.Track(folder_name)
+if hpc == True:
 
-print("\n\nPROGRESS: jobs.txt updated.")
+    folder_name = new_path.split('/')[-1]
+    job_tracker.Track(folder_name)
+
+    print("\n\nPROGRESS: jobs.txt updated.")
 
 ###################################################################################
 

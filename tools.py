@@ -4,12 +4,12 @@ import numpy as np
 import math
 
 
-def file_proc(file):
+def file_proc(file, seperator = "\n"):
     """Short function to split text files into a list of lines"""
 
     opened_file = open(file, 'r')
     opened_file = opened_file.read()
-    opened_file = opened_file.split("\n")
+    opened_file = opened_file.split(seperator)
     return opened_file
 
 
@@ -36,6 +36,41 @@ def xyz_to_array(xyz_file_path):
     return atoms_arr
 
 
+def custom_to_dict(dump_path):
+
+    dump_file = file_proc(f"{dump_path}", seperator="ITEM: ")
+    dump_file.remove("")
+
+    timestep = float(dump_file[0].split("\n")[1])
+    number_of_atoms = float(dump_file[1].split("\n")[1])
+
+    atoms_string = dump_file[3].split("\n")
+    atoms_string.remove("")
+    column_titles = atoms_string[0].split()[1:]
+
+    info_array = np.zeros([int(number_of_atoms)*2, len(column_titles)])
+
+    for line in atoms_string[1:]:
+
+        line = line.split(" ")
+       
+        line = [float(item) for item in line]
+        
+        info_array[int(line[0]-1)] = np.array(line) 
+
+
+    to_delete = [index for index,line in enumerate(info_array) if line[0] == 0]
+    
+    info_array = np.delete(info_array, to_delete, 0)
+
+
+    results_dict = dict(timestep = timestep,
+                    number_of_atoms = number_of_atoms,
+                    column_titles = column_titles,
+                    info_array = info_array
+                    )
+
+    return results_dict
 
 def region_assign(initial, loaded = False):
         

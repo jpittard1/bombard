@@ -371,59 +371,31 @@ class XYZ():
    
         path = self.user_options.path
 
-        os.mkdir("%s/xyz_files"%path)
+        try:
 
-        upper_lim = steps[-1] #maybe this?
+            os.mkdir(("%s/xyz_files"%path))
+        except FileExistsError:
+            pass
+        os.system(f"mv {path}/*.xyz {path}/xyz_files/")
 
-        rem = upper_lim%dump
-        last_whole_step = upper_lim - rem #mayeb this is wrong?
+        files = [filenames for (dirpath, dirnames, filenames) in os.walk(f"{path}/xyz_files/")][0]
 
-        data = ''
-        files_found = False
-
-        for i in range (0,int(last_whole_step+dump),dump):
-
-            try:
-                next_file = open("%s/%s.xyz"%(path,i), "r")
-                files_found = True
-            except FileNotFoundError:
-                pass
-            else:
-                next_data = next_file.read()
-
-                data += next_data
-                data += "\n"
-
-                if self.user_options.test == True:
-                    shutil.copyfile("%s/%s.xyz"%(path,i), "%s/xyz_files/%s.xyz"%(path,i))
-                if self.user_options.reduce_size == True:
-                    os.remove("%s/%s.xyz"%(path,i))
-                else:
-                    shutil.move("%s/%s.xyz"%(path,i), "%s/xyz_files/%s.xyz"%(path,i))
+        times = [int(file[:-4]) for file in files]
+        times.sort()
         
-    
-        if rem != 0:
-            try:
-                final_file = open("%s/%s.xyz"%(path,int(upper_lim)), "r")
-                final_data = final_file.read()
-                data += final_data
-                data += "\n"
-                if self.user_options.test == True:
-                    shutil.copyfile("%s/%s.xyz"%(path,int(upper_lim)), "%s/xyz_files/%s.xyz"%(path,int(upper_lim)))
-                if self.user_options.reduce_size == True:
-                    os.remove("%s/%s.xyz"%(path,i))
-                else:
-                    shutil.move("%s/%s.xyz"%(path,int(upper_lim)), "%s/xyz_files/%s.xyz"%(path,int(upper_lim)))
-            except FileNotFoundError:
-                pass
+        data = ''
+        for time in times:
+            next_file = open(f"{path}/xyz_files/{time}.xyz")
+            data += next_file.read()
+            data += '\n'
 
-        if files_found == True:
-            with open ('%s/all.xyz'%path, 'w') as fp: 
-                fp.write(data) 
-        else:
-            print("\nERROR: xyz compiler could not find files.")
+        with open ('%s/all.xyz'%path, 'w') as fp: 
+            fp.write(data) 
+      
+        os.mkdir(("%s/steinhardt_files"%path))
+        os.system(f"mv {path}/*.para {path}/steinhardt_files/")
 
-
+  
 ########################################################################
 
 def main(path = None, in_file = None, data_file = None, variable = None, reduce_size = False):
@@ -512,6 +484,7 @@ if __name__ == "__main__":
         os.system(f"python depth.py {file_name}")
         os.system(f"python damage.py {file_name}")
         os.system(f"python saturate.py {file_name}")
+        os.system(f"python steinhardt.py {file_name}")
 
 
     file_paths = open(f"{dir_path}/results/file_path.txt", 'r')
