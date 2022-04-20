@@ -1,11 +1,13 @@
 
 
 
-from importlib.resources import path
-import os 
+import os
+from re import S 
 import time
 import shutil
 import random
+import numpy as np
+import pprint
 
 import graphene_maker as gmak
 import tools
@@ -29,7 +31,8 @@ grain = False
 multi_bombard = True
 energy = 30
 test = False
-hpc = False  
+hpc = False
+
 
 if loaded == True:
     replicate = ['8','8','6']
@@ -40,9 +43,9 @@ if grain == True:
 if multi_bombard == True:
     input_file_name = 'in.multi_bombard_para'
 
-pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
+pre_bomb_run_val = '1000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
-bomb_run_val = "3000" #this is automatically increase for slow particles and must be
+bomb_run_val = "1000" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
 number_of_particles = '5' #bombarding
 
@@ -68,6 +71,147 @@ data_files = []
     
 
 #Better way would be to just turn every line into a dict, with the first word the key, then can look up
+#Unsure how well a dict would keep the order, or deal with multiple keys
+#Maybe an array would be better, would ensure order is preserved, can look up indexes in the first column
+#graphene_sheets = in_file_arr.look_up('#number_of_sheets')
+#good idea to make array object
+
+
+class Input_file:
+    def __init__(self, path):
+        self.path = path
+
+
+    def open(self):
+        setattr(self, "in_file",tools.file_proc(self.path))
+
+
+    def list_convert(self):
+
+        in_list = []
+        commands = []
+        for index, line in enumerate(in_file):
+            line = line.split(' ')
+
+            new_line = []
+            for i in line:
+                new_line.extend(i.split("\t"))
+
+            while True:
+                try:
+                    new_line.remove('')
+                except ValueError:
+                    break
+  
+            in_list.append(new_line)
+            try:
+                commands.append(new_line[0])
+            except IndexError:
+                commands.append('')
+
+
+
+        setattr(self, 'in_list', in_list)
+        setattr(self, 'commands', commands)
+
+    def look_up(self, identifiers, out_indices = False):
+
+        if type(identifiers) == list:
+            command, identifier = identifiers
+        else:
+            command = identifiers
+
+        indices = [i for i, x in enumerate(self.commands) if x == command]
+
+        results = [self.in_list[i] for i in indices]
+
+        if len(results) == 1:
+            results = results[0]
+
+        if type(identifiers) == list:
+            for i in indices:
+                try:
+                    index = self.in_list[i].index(identifier)
+
+                    if out_indices == False:
+                        return self.in_list[i]
+                    else:
+                        return self.in_list[i], [i]
+                except ValueError:
+                    pass
+        
+        else:
+            if out_indices == False:
+                return results
+            else:
+                return results, indices
+
+
+    def add_path(self, identifiers, path = None):
+
+        line_to_edit, indices = self.look_up(identifiers, out_indices=True)
+       
+    
+        if len(indices) > 1:
+
+            lengths = [len(line) for line in line_to_edit]
+            index = lengths.index(min(lengths))
+          
+            line_to_edit = line_to_edit[index]
+            main_index = indices[index]
+        
+        else:
+            main_index = indices[0]
+
+        index, file_path = [[i, line] for i, line in enumerate(line_to_edit) if line[0] == '/'][0]
+
+        file_path = file_path.split("/")
+
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        line_to_edit[index] = f"{dir_path}/LAMMPS_files/{file_path[-1]}"
+
+        self.in_list[main_index] = line_to_edit
+        
+        return line_to_edit[index]
+
+
+
+    def edit_line(self, identifiers, indicies, values):
+
+        line_to_edit, main_index = self.look_up(identifiers, out_indices=True)
+
+        for i, index in enumerate(indicies):
+            line_to_edit[index] = values[i]
+
+        self.in_list[int(main_index[0])] = line_to_edit
+
+        print(line_to_edit)
+
+'''
+            
+atom_masses = dict(h = 1.0079, d = 2.0014, t = 3.0160)
+unit_conv = 1e-2*(1.602e-19/1.661e-27)**0.5
+
+input_file = Input_file("%s/%s"%(lammps_files_path, input_file_name))
+input_file.open()
+input_file.list_convert()
+
+graphite_sheets = input_file.look_up("#number_of_sheets")[1]
+atom_type = input_file.look_up("#atom_type")[1]
+diamond_type = input_file.look_up("#diamond_type")[1]
+replicate = input_file.look_up("replicate")[1]
+
+velocity = (2*energy/float(atom_masses[atom_type])**0.5)*unit_conv 
+
+input_file.add_path('read_data')
+input_file.add_path(['read_data', 'add'])
+input_file.add_path('pair_coeff')
+
+input_file.edit_line('set', [-1], [str(velocity)])
+
+
+raise ValueError
+'''
 
 new = ''
 primary_data_file_bool = True
