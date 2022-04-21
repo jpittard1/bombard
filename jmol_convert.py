@@ -50,6 +50,7 @@ def main(all_xyz_file_path):
     except IndexError:
         split = 100
 
+    print("%s/settings.csv"%all_xyz_file_path[:-8])
     settings_dict = csv_reader("%s/settings.csv"%all_xyz_file_path[:-8])
 
     frames = []
@@ -110,7 +111,7 @@ def main(all_xyz_file_path):
 
     with open("%s/jmol_all.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(jmol_str)
-
+    
     with open("%s/initial.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(frames[0].present_arr(jmol = True))
 
@@ -125,7 +126,7 @@ def main(all_xyz_file_path):
 
     with open("%s/equilibrium_indexed.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(frames[equilibrium_index].present_arr())
-
+    
     
 
 
