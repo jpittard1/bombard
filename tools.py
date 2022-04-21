@@ -1,5 +1,6 @@
 
 from asyncore import file_dispatcher
+from typing import Type
 import numpy as np
 import math
 
@@ -11,6 +12,40 @@ def file_proc(file, seperator = "\n"):
     opened_file = opened_file.read()
     opened_file = opened_file.split(seperator)
     return opened_file
+
+def str_to_list(string, float = False):
+
+    if string[0] != '[' or string[-1] != ']':
+        raise TypeError(f'{string} is not a list.')
+        
+
+    string = string[1:-1]
+    out_list = string.split(',')
+
+    if float == True:
+        out_list = [float(i) for i in out_list]
+
+    return out_list
+
+def str_to_bool(string):
+
+    if string == 'True' or string == 'False':
+        return bool(string)
+
+    else:
+        raise TypeError(f'{string} is not a boolean.')
+
+def str_to_float(string):
+
+    try:
+         return float(string)
+    except ValueError:
+        raise TypeError
+
+
+def closest_to(val, list):
+    abs_vals = [abs(i-val) for i in list]
+    return list[abs_vals.index(min(abs_vals))]
 
 
 
@@ -35,31 +70,49 @@ def xyz_to_array(xyz_file_path):
 
     return atoms_arr
 
+def mkdir(path):
+    import os
+
+    try:
+        os.mkdir(path)
+    except FileExistsError:
+        pass
+
 
 def custom_to_dict(dump_path):
 
     dump_file = file_proc(f"{dump_path}", seperator="ITEM: ")
     dump_file.remove("")
 
+    print(f"\nOpening: {dump_path}")
+
     timestep = float(dump_file[0].split("\n")[1])
     number_of_atoms = float(dump_file[1].split("\n")[1])
 
+    print(number_of_atoms)
     atoms_string = dump_file[3].split("\n")
     atoms_string.remove("")
+    
     column_titles = atoms_string[0].split()[1:]
 
-    info_array = np.zeros([int(number_of_atoms)*2, len(column_titles)])
+    info_array = np.ones([int(number_of_atoms)*2, len(column_titles)])*10000
 
-    for line in atoms_string[1:]:
+    for index,line in enumerate(atoms_string[1:]):
 
         line = line.split(" ")
-       
+
+        try:
+            line.remove("")
+        except ValueError:
+            pass
+
         line = [float(item) for item in line]
         
-        info_array[int(line[0]-1)] = np.array(line) 
+        info_array[index] = np.array(line) 
 
 
-    to_delete = [index for index,line in enumerate(info_array) if line[0] == 0]
+    to_delete = [index for index,line in enumerate(info_array) if line[0] == 10000]
+    print(len(to_delete))
     
     info_array = np.delete(info_array, to_delete, 0)
 

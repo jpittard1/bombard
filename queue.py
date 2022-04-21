@@ -30,9 +30,9 @@ loaded = False
 grain = False
 multi_bombard = True
 energy = 30
-test = False
+test = True
 hpc = False
-
+temp = 400
 
 if loaded == True:
     replicate = ['8','8','6']
@@ -311,11 +311,17 @@ for i in in_file: #goes through the input file line by line both reading and edi
         if i[0] == "fix" and len(i[-1]) == 5: #changing random seed for each repeat
             rand = random.randint(10000,99999)
             i[-1] = str(rand)
+            i[4] = str(temp)
+            i[5] = str(temp)
+
+
             in_file[index] = seperator.join(i)
 
         if i[0] == "velocity" and i[1] == 'all' and i[2] == 'create': #changing random seed for each repeat
             rand = random.randint(10000,99999)
             i[4] = str(rand)
+            i[3] = str(temp)
+
             in_file[index] = seperator.join(i)
 
     
@@ -440,6 +446,7 @@ settings_dict = dict(no_bombarding_atoms = number_of_particles,
                     diamond_type = diamond_type,
                     bulk_atoms_dict = bulk_atoms_dict,
                     energy = energy,
+                    temp = temp,
                     atom_type = atom_type,
                     pre_bombard_time = pre_bomb_run_val,
                     bombard_time = bomb_run_val,
