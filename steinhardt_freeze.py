@@ -1,6 +1,5 @@
 
-
-from ast import expr_context
+from math import degrees
 from multiprocessing.sharedctypes import Value
 import steinhardt
 import tools
@@ -21,10 +20,52 @@ class Steinhardt_Frame:
     def convert_to_datafile(self, path, name):
         data_file_maker.remove_h(self.xyz_file, path, name)
 
-    def generate_paras(self, path, current_dir):
+    def change_paras(self, path, q_paras):
+        in_file = tools.file_proc(f"{path}/in.steinhardt_calc")
+        seperator = ' '
+
+        default_qs = [4,6,8,10,12]
+        q_paras = [str(int(para)) for para in q_paras]
+
+        for index, line in enumerate(in_file):
+            line = line.split(' ')
+
+            if line[0] == 'compute':
+                line = line[0:4] + ['degrees'] + q_paras + line[4:]
+                print(line)
+            
+            in_file[index] = seperator.join(line)
+        
+        seperator = '\n'
+        new_in_file = seperator.join(in_file)
+
+
+        with open(f"{path}/in.steinhardt_calc", 'w') as fp: #rewriting edited input file
+            fp.write(str(new_in_file)) 
+
+    def generate_paras(self, path, current_dir, q_paras = None):
+        
+        if q_paras != None: # wouldnt let me use less than 5 parameters, maybe always have core pararemters and take extras as an argument? or only plot ones required
+            self.change_paras(path, q_paras)
+
         os.chdir(path)
         os.system("lmp_serial -in in.steinhardt_calc")
         os.chdir(current_dir)
+
+    def get_columns(self, input_qs, default_qs = [4,6,8,10,12]):
+
+        to_add = []
+        for i in input_qs:
+            try:
+                default_qs.index(i)
+            except ValueError:
+                to_add.append(i)
+
+
+        to_plot = to_add + default_qs
+        column_indexes = [int(to_plot.index(i)+1) for i in input_qs]
+
+        return column_indexes, to_plot
 
 
 def main(steinhardt_settings_dict):
@@ -52,6 +93,8 @@ def main(steinhardt_settings_dict):
         times_to_plot = [times[i] for i in timestep_indexes]
 
     elif len(steinhardt_settings_dict['timesteps']) != 0:
+        print(times)
+        print(steinhardt_settings_dict['timesteps'])
         times_to_plot = [tools.closest_to(time,times) for time in steinhardt_settings_dict['timesteps']]
         timestep_indexes = [times.index(time) for time in times_to_plot]
 
@@ -71,7 +114,7 @@ def main(steinhardt_settings_dict):
         os.system(f"cp {current_dir}/LAMMPS_files/data.frozen_1 {path}/data.frozen_1")
         os.system(f"mv {current_dir}/LAMMPS_files/data.frozen_1.xyz {path}/{frame.time}.xyz")
 
-        frame.generate_paras(path, current_dir)
+        frame.generate_paras(path, current_dir, q_paras=steinhardt_settings_dict['q_paras'])
 
         os.system(f"mv {path}/data.frozen_1 {path}/data.{frame.time}")
         os.system(f"mv {path}/new.para {path}/{frame.time}.para")
@@ -80,9 +123,11 @@ def main(steinhardt_settings_dict):
     file_dicts = [tools.custom_to_dict(f"{path}/{frame.time}.para") for frame in frames]
     file_arrs = [file_dict['info_array'] for file_dict in file_dicts]
 
-    #avg_str, avg_dict, full_array = steinhardt.averages(file_arrs, center_only= True, zlims = [-20,0]) 
-    #avg_str, avg_dict, full_array = steinhardt.averages(file_arrs, center_only= True) 
-    avg_str, avg_dict, full_array = steinhardt.averages(file_arrs, centre_only = steinhardt_settings_dict['reference_gen'])
+    column_indexes, q_paras = frames[0].get_columns(steinhardt_settings_dict['q_paras'])
+    
+
+    avg_str, avg_dict, full_array = steinhardt.averages(file_arrs, 
+                                    center_only = steinhardt_settings_dict['reference_gen'])
 
     steinhardt.histogram(full_array, path)
 
@@ -117,13 +162,16 @@ def main(steinhardt_settings_dict):
 
 if __name__ == '__main__':
 
+    fail = False
+
     steinhardt_settings_dict = dict(file = None,
                                     frames = 4,
                                     timesteps = [],
                                     line_plots = True,
                                     histograms = False,
                                     reference_gen = False,
-                                    zlims = [10,25])
+                                    zlims = [10,25],
+                                    q_paras = [4,6,8,10,12])
 
 
     try:
@@ -135,16 +183,26 @@ if __name__ == '__main__':
 
             if len(arg) == 1:
                 print("\nERROR: Input arguments as: frames-4 etc.\n")
+                fail = True
                 break
-
+            
+            try:
+                x = steinhardt_settings_dict[arg[0]]
+            except KeyError:
+                print(f"\nERROR: {arg[0]} is an invalid arguments.")
+                print("\nDefault arguments: ")
+                pprint.pprint(steinhardt_settings_dict)
+                fail = True
+                break
+            
             try:
                 steinhardt_settings_dict[arg[0]] = tools.str_to_bool(arg[1])
             except TypeError:
                 try:
                     steinhardt_settings_dict[arg[0]] = tools.str_to_float(arg[1])
-                except TypeError or ValueError:
+                except TypeError:
                     try:
-                        steinhardt_settings_dict[arg[0]] = tools.str_to_list(arg[1])
+                        steinhardt_settings_dict[arg[0]] = tools.str_to_list(arg[1], float_vals = True)
                     except TypeError:
                         steinhardt_settings_dict[arg[0]] = arg[1]
                     
@@ -153,9 +211,10 @@ if __name__ == '__main__':
                 steinhardt_settings_dict['frames'] = len(steinhardt_settings_dict['timesteps'])
 
 
-        pprint.pprint(steinhardt_settings_dict)
+        if fail == False:
+            main(steinhardt_settings_dict)
 
-        main(steinhardt_settings_dict)
+        
 
     except IndexError:
         print("\nERROR: No Filename Provided.")

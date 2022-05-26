@@ -168,7 +168,7 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
         plt.close()
 
         out = "z, average\n"
-        for index, bin in enumerate(bins):
+        for index, bin in (bins):
             out += f"{bin}, {avgs[index][0]}, {avgs[index][1]} \n"
 
         with open(f"{path}/{titles[column]}.txt", 'w') as fp: 
