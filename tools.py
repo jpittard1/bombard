@@ -13,7 +13,7 @@ def file_proc(file, seperator = "\n"):
     opened_file = opened_file.split(seperator)
     return opened_file
 
-def str_to_list(string, float = False):
+def str_to_list(string, float_vals = False):
 
     if string[0] != '[' or string[-1] != ']':
         raise TypeError(f'{string} is not a list.')
@@ -22,7 +22,7 @@ def str_to_list(string, float = False):
     string = string[1:-1]
     out_list = string.split(',')
 
-    if float == True:
+    if float_vals == True:
         out_list = [float(i) for i in out_list]
 
     return out_list
@@ -38,14 +38,14 @@ def str_to_bool(string):
 def str_to_float(string):
 
     try:
-         return float(string)
+        return float(string)
     except ValueError:
         raise TypeError
 
 
-def closest_to(val, list):
-    abs_vals = [abs(i-val) for i in list]
-    return list[abs_vals.index(min(abs_vals))]
+def closest_to(val, list_):
+    abs_vals = [abs(i-val) for i in list_]
+    return list_[abs_vals.index(min(abs_vals))]
 
 
 
@@ -89,7 +89,6 @@ def custom_to_dict(dump_path):
     timestep = float(dump_file[0].split("\n")[1])
     number_of_atoms = float(dump_file[1].split("\n")[1])
 
-    print(number_of_atoms)
     atoms_string = dump_file[3].split("\n")
     atoms_string.remove("")
     
@@ -112,7 +111,6 @@ def custom_to_dict(dump_path):
 
 
     to_delete = [index for index,line in enumerate(info_array) if line[0] == 10000]
-    print(len(to_delete))
     
     info_array = np.delete(info_array, to_delete, 0)
 
@@ -124,6 +122,16 @@ def custom_to_dict(dump_path):
                     )
 
     return results_dict
+
+
+def array_column_select(arr, columns):
+
+    new_arr = np.zeros([len(columns), arr.shape[1]])
+
+    for i, index in enumerate(columns):
+        new_arr[i] = arr[:,index]
+
+    return new_arr
 
 def region_assign(initial, loaded = False):
         

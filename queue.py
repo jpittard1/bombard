@@ -503,20 +503,20 @@ try:
     file_paths = file_paths.read()
 
     file_paths = file_paths[1:-1]
-    print(f"FILE PATH str: {file_paths}")
+  
 
     file_paths = file_paths.split(",")
   
     file_paths = [file_path.replace("'","") for file_path in file_paths]
     file_paths = [file_path.replace(" ","") for file_path in file_paths]
 
-    print(f"FILE PATH LIST: {file_paths}")
+
 
 except FileNotFoundError:
     file_paths = []
 
 file_paths += paths
-print(f"\n\n PATHS {paths}")
+
 
 
 

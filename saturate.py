@@ -91,14 +91,22 @@ def main(path):
 
     initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
 
-    carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk']]
+    #at the moment takes carbon atoms from final file, need some sense check to remove carbon atoms above
+    #Use 0 (initial surface hieght) +1 to account for variation in thermal positiosns
+    #Use rebo cut off distcance? (2Ang)
 
-    diamond_surface_zs = sorted(carbon_zs)[0:100]
+
+
+    carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk'] if final_arr[index][-1] > -2]
+
+
+    no_surface_atoms = int(2*settings_dict['replicate'][0]*settings_dict['replicate'][1])
+    diamond_surface_zs = sorted(carbon_zs)[0:no_surface_atoms]
 
     surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
 
-    surface_limit = surfaces["diamond_surface"][0] - 0*3.567
-
+    surface_limit = surfaces["diamond_surface"][0] - 2
+    surface_limit_err = surfaces["diamond_surface"][1]
 
 
     ##############################################################################
@@ -148,7 +156,9 @@ def main(path):
 
     print("\n\nPROGRESS: Generating results.txt and graphs.") 
 
-    results_str = 'time, bombard_attempts, d_counter, t_counter\n' + str(results_arr)
+    results_str = f'Saturate results for {path.split("/")[-2]}\n\n'
+    results_str += f'Surface taken to be at height of {surface_limit}±{surface_limit_err}A.\n\n'
+    results_str += 'time, bombard_attempts, d_counter, t_counter, c_counter\n' + str(results_arr)
 
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file
         fp.write(str(results_str))
