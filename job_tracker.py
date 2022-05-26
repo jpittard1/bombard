@@ -97,8 +97,106 @@ class Track:
 
 
 
+
+def get_info(job_id):
+
+     success = False
+     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/jobs.txt", seperator= "-"*40) 
+
+     for job in jobs:
+          job_lines = job.split('\n')
+          job_lines.remove('')
+
+          try:
+               id = job_lines[2].split(' ')[-1]
+
+               if int(job_id) == int(id):
+                    print(job)
+                    success = True
+                    break
+          except IndexError:
+               pass
+     
+     if success == False:
+          print(f"\nERROR: Could not find {job_id} in jobs.txt.\n")
+
+
+def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
+
+     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/jobs.txt", seperator= "-"*40)
+
+     to_run_file_names = []
+
+     if last_jobs != None:
+          jobs = jobs[:int(last_jobs+1)]
+
+          for job in jobs:
+               job_lines = job.split('\n')
+               job_lines.remove('')
+
+               try:
+                    to_run_file_names.append(job_lines[3].split(' ')[-1])
+
+               except IndexError:
+                    pass
+
+     elif job_ids[0] != None:
+
+          for job in jobs:
+               job_lines = job.split('\n')
+               job_lines.remove('')
+
+               try:
+                    if job_lines[2].split(' ')[-1] in job_ids:
+                         to_run_file_names.append(job_lines[3].split(' ')[-1])
+
+               except IndexError:
+                    pass
+
+     
+     elif file_names[0] != None:
+          to_run_file_names = file_names
+
+     
+     for file_name in to_run_file_names:
+          os.system(f"python lint.py True {file_name}")
+
+
+     print(f"\n\nAnalysis attempted for: {to_run_file_names}\n\n")
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
    
 if __name__ == "__main__":
+
+     if sys.argv[1] == "-help":
+          print("\n\nTo get job info, give job ID as arguemnt.")
+          print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
+
+     if sys.argv[1] == '-multi':
+          if sys.argv[2] == '-last_jobs':
+               run_multi_analysis(last_jobs=int(sys.argv[3]))
+
+          if sys.argv[2] == '-ids':
+               run_multi_analysis(job_ids = sys.argv[3:])
    
-     file_name = sys.argv[1]
-     track = Track(file_name)
+          if sys.argv[2] == '-names':
+               run_multi_analysis(file_names = sys.argv[3:])
+
+     elif sys.argv[1] != '-help' and sys.argv[1] != 'multi':
+          job_id = sys.argv[1]
+          get_info(job_id)
+
+
+          
