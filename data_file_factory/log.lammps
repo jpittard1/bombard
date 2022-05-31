@@ -1,0 +1,276 @@
+LAMMPS (29 Oct 2020)
+units		metal
+atom_style	atomic
+
+boundary        p  p  f
+read_data /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/data.diamond
+Reading data file ...
+  orthogonal box = (0.0000000 0.0000000 0.0000000) to (3.5670000 3.5670000 3.5670000)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  8 atoms
+  read_data CPU = 0.001 seconds
+
+replicate 6 8 3
+Replicating atoms ...
+WARNING: Replicating in a non-periodic dimension (../replicate.cpp:75)
+  orthogonal box = (0.0000000 0.0000000 0.0000000) to (21.402000 28.536000 10.701000)
+  1 by 1 by 1 MPI processor grid
+  1152 atoms
+  replicate CPU = 0.001 seconds
+
+read_data /Users/jamespittard/Documents/PhD/Bombard/data_file_factory/data.6_8_3_0deg_1 add append shift 0 0 -10.201
+Reading data file ...
+  orthogonal box = (0.0000000 0.0000000 -60.201000) to (21.402000 28.536000 61.139000)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  234 atoms
+  read_data CPU = 0.000 seconds
+
+change_box      all z final  -80 107.387
+Changing box ...
+  orthogonal box = (0.0000000 0.0000000 -80.000000) to (21.402000 28.536000 107.38700)
+region		1 block 0 21.4774 0 21.4774 0 107.387
+
+group		car type 1
+1386 atoms in group car
+
+velocity all create 300 98268 rot yes dist gaussian
+
+neighbor	0.5 bin
+neigh_modify	delay 0 every 1 check yes
+pair_style      rebo
+pair_coeff * * /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/CH.rebo C H H
+Reading rebo potential file /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/CH.rebo with DATE: 2018-7-3
+#pair_style	airebo 3.0 1 1
+#pair_coeff	* * CH.airebo C H
+pair_modify	shift yes
+
+timestep 0.0001
+thermo 		1000
+fix             1 all nve
+fix 2 car temp/csld 300 300 0.1 82746
+fix 3 all recenter NULL NULL INIT
+thermo_style 	custom step time temp press etotal vol
+
+dump		1 all custom 100 *.xyz id type x y z
+run 10 #prebombardment run
+Neighbor list info ...
+  update every 1 steps, delay 0 steps, check yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 6.5
+  ghost atom cutoff = 6.5
+  binsize = 3.25, bins = 7 9 58
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair rebo, perpetual
+      attributes: full, newton on, ghost
+      pair build: full/bin/ghost
+      stencil: full/ghost/bin/3d
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 5.678 | 5.678 | 5.678 Mbytes
+Step Time Temp Press TotEng Volume 
+       0            0          300    2340.9302   -8895.1374    114442.39 
+      10        0.001    297.15432    2408.9876   -8895.4056    114442.39 
+Loop time of 0.0467319 on 1 procs for 10 steps with 1386 atoms
+
+Performance: 1.849 ns/day, 12.981 hours/ns, 213.986 timesteps/s
+96.4% CPU use with 1 MPI tasks x no OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.044106   | 0.044106   | 0.044106   |   0.0 | 94.38
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.00021434 | 0.00021434 | 0.00021434 |   0.0 |  0.46
+Output  | 3.0994e-05 | 3.0994e-05 | 3.0994e-05 |   0.0 |  0.07
+Modify  | 0.0022616  | 0.0022616  | 0.0022616  |   0.0 |  4.84
+Other   |            | 0.0001187  |            |       |  0.25
+
+Nlocal:        1386.00 ave        1386 max        1386 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:        1934.00 ave        1934 max        1934 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:        0.00000 ave           0 max           0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+FullNghs:     187274.0 ave      187274 max      187274 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 187274
+Ave neighs/atom = 135.11833
+Neighbor list builds = 0
+Dangerous builds = 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Total wall time: 0:00:00
