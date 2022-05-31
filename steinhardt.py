@@ -282,3 +282,6 @@ if __name__ == "__main__":
     path = current_dir + '/results/' +  dir_name
     print(path)
     main(path, time_animation = time_animation)
+
+
+

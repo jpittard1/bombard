@@ -4,11 +4,11 @@ variable d uloop 5
 
 boundary        p  p  f
 read_data /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/data.diamond
-replicate 8 8 6
-#replicate 2 2 2
+#replicate 8 8 6
+replicate 2 2 2
 
 #number_of_sheets 0
-#atom_type d
+#atom_type t
 #diamond_type 100
 
 read_data /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/data.graphite_sheet add append shift 0 0 0
@@ -16,11 +16,11 @@ read_data /Users/jamespittard/Documents/PhD/Bombard/LAMMPS_files/data.graphite_s
 
 change_box      all z final  -80 107.387
 region		1 block 0 21.4774 0 21.4774 0 107.387
-region box block -28.536 32.103 -28.536 32.103 -55.0 -25.0
+region box block 0.0 7.134 0.0 7.134 -55.0 -25.0
 #^^^^ region that bombarding particle is produced
 group		car type 1
 
-velocity all create 300 71344 rot yes dist gaussian
+velocity all create 300 98268 rot yes dist gaussian
 
 neighbor	0.5 bin
 neigh_modify	delay 0 every 1 check yes
@@ -33,7 +33,7 @@ pair_modify	shift yes
 timestep 0.0001
 thermo 		10
 fix             1 all nve
-fix 2 car temp/csld 300 300 0.1 29394
+fix 2 car temp/csld 300 300 0.1 82746
 fix 3 all recenter NULL NULL INIT
 thermo_style 	custom step time temp press etotal vol 
 
@@ -44,8 +44,8 @@ run 100 #prebombardment run
 
 thermo_modify   lost warn
 label           nextd
-create_atoms	2 random 1 $d3 box
-set region box vx 0 vy 0 vz 620.9040396658934
+create_atoms 3 random 1 $d3 box
+set region box vx 0 vy 0 vz 505.7964356520058
 velocity	all zero angular
 run 100 #inbetween bombardments
 
@@ -53,6 +53,19 @@ next d
 jump SELF nextd
 
 run 1000
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

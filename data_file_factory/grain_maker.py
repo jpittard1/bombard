@@ -4,6 +4,7 @@
 
 import os
 import sys
+import glob
 import box_checker
 import data_file_maker as dfm
 
@@ -57,7 +58,7 @@ def create_grain(rotated_data_file_name, shift, replicate):
             if line[0] == 'read_data' and line[2] == 'add':
                 path = f'{current_dir}/data.{rotated_data_file_name}_1'
                 line[1] = path
-                line[-1] = str(-shift +0.5)
+                line[-2] = str(-shift -0.5)
                 sep = ' '
                 in_file[index] = sep.join(line)
                 break
@@ -73,28 +74,80 @@ def create_grain(rotated_data_file_name, shift, replicate):
 
     os.system('lmp_serial -in LAMMPS_files/in.create_grain')
 
+    
 
     
 
-def main(desired_replicate, rotation_deg):
 
-    desired_final_size = [6,6,8]
 
-    desired_replicate = [desired_final_size[1],desired_final_size[2],int(desired_final_size[0]/2)]
-    desired_replicate = [desired_final_size[1],int(desired_final_size[0]/2), desired_final_size[2]]
+
+def minimise_grain(data_file_name):
+
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    in_file = tools.file_proc(f'{current_dir}/LAMMPS_files/in.minimise_grain')
+
+    for index, line in enumerate(in_file):
+        line = line.split(' ')
+
+        if line[0] == 'read_data':
+            path = f'{current_dir}/data.{data_file_name}_1'
+            line[1] = path
+            sep = ' '
+            in_file[index] = sep.join(line)
+            break
+
+
+    sep = '\n'
+    in_file = sep.join(in_file)
+
+    with open(f'{current_dir}/LAMMPS_files/in.minimise_grain', 'w') as fp: #rewriting edited input file
+        fp.write(str(in_file)) 
+
+    os.system('lmp_serial -in LAMMPS_files/in.minimise_grain')
+
+    full_path = glob.glob(f'{current_dir}/*.xyz')
+
+    xyz_files = [path.split('/')[-1] for path in full_path]
+    xyz_files.sort()
+
+    for file in xyz_files:
+        try:
+            last_file = f"{int(file[:-4])}.xyz"
+        except ValueError:
+            break
+
+    return last_file
+
+    
+
+def main(desired_final_size, rotation_deg):
+
+    desired_replicate = [int(desired_final_size[1]),int(desired_final_size[0]/2), int(desired_final_size[2])]
 
     block_size_dict, limits_list = box_checker.main(desired_replicate, rotation_deg)
 
     create_xyz(block_size_dict)
 
-    data_file_name = dfm.main(desired_replicate, rotation_deg, limits_list)
+    data_file_name = dfm.main('0.xyz', desired_replicate, rotation_deg, limits_list, xyz_file_name='rotated_diamond')
 
-    shift = abs(limits_list[2][0] - limits_list[2][1])
+    shift = abs(limits_list[1][0] - limits_list[1][1])
     create_grain(data_file_name, shift, desired_replicate)
 
-    data_file_name = dfm.main([0,0,0], [0,0,0])
-   
+    data_file_name = dfm.main('0.xyz',[0,0,0], [0,0,0], xyz_file_name='grain', data_file_name = f'grain_{int(rotation[2])}deg')
 
+    last_file = minimise_grain(data_file_name)
+
+    data_file_name = dfm.main(last_file, [0,0,0], [0,0,0], xyz_file_name='min_grain', data_file_name = f'min_grain_{int(rotation[2])}deg')
+
+    
+    os.system(f"mkdir xyz_files")
+    os.system(f"mv *xyz xyz_files/")
+    os.system(f"mkdir {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
+    os.system(f"mv data.* {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
+    os.system(f"mv xyz_files/ {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
+    os.system(f"mv log.lammps {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
+    
+    
 if __name__ == '__main__':
     success = False
     try:

@@ -46,30 +46,45 @@ def main(path):
 
     print("\n\nPROGRESS: Determining heights of surfaces.") 
 
-    if loaded == False:
-        diamond_surface_zs = [final_arr[index][-1] for index in region_indexes['diamond_surface']]
+    #if loaded == False:
+        
+    all_carbon_indexes = region_indexes['diamond_bulk'] + region_indexes['diamond_surface']
+    carbon_zs = [final_arr[index][-1] for index in all_carbon_indexes if final_arr[index][-1] > -2]
 
-        surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])
+    no_surface_atoms = int(2*settings_dict['replicate'][0]*settings_dict['replicate'][1])
+    diamond_surface_zs = sorted(carbon_zs)[0:no_surface_atoms]
 
-        for i in range(1,100):
-
-            layer_key = 'graphene_%s'%i
-
-            try:
-                layer_zs = [final_arr[index][-1] for index in region_indexes[layer_key]]
-
-                surfaces[layer_key] = tools.avg(layer_zs) 
-
-            except KeyError:
-                break
+    surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
 
 
-    else: #averages top 100 atoms for loaded sims
-        carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk']]
 
-        diamond_surface_zs = sorted(carbon_zs)[0:100]
 
-        surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
+
+
+
+    #diamond_surface_zs = [final_arr[index][-1] for index in region_indexes['diamond_surface']]
+
+    #surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])
+
+    for i in range(1,100):
+
+        layer_key = 'graphene_%s'%i
+
+        try:
+            layer_zs = [final_arr[index][-1] for index in region_indexes[layer_key]]
+
+            surfaces[layer_key] = tools.avg(layer_zs) 
+
+        except KeyError:
+            break
+
+
+    #else: #averages top 100 atoms for loaded sims
+     #   carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk']]
+
+      #  diamond_surface_zs = sorted(carbon_zs)[0:100]
+
+       # surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
     
 
     ########################### Getting Pentration Depths ###########################
@@ -79,7 +94,8 @@ def main(path):
   
     zs = [[],[],[],[],[]]
     for atom in final_arr:
-        zs[int(atom[0])].append(atom[-1])
+        if atom[-1] > surfaces['diamond_surface'][0] - 2 :
+            zs[int(atom[0])].append(atom[-1])
 
     diamond_pens = [[],[],[],[],[]]
     for atom_type in range(0,5):
@@ -149,8 +165,10 @@ def main(path):
 
     print("\n\nPROGRESS: Generating results.txt and graphs.") 
 
-    results = ''
-   
+
+    results = f'Depth results for {path.split("/")[-2]}\n\n'
+    results += f'Diamond surface taken to be at height of {surfaces["diamond_surface"][0]}±{surfaces["diamond_surface"][1]}A.\n\n'
+
  
     for atom_type in range (2,5):
         average, stderr = tools.avg(diamond_pens[atom_type])
@@ -223,8 +241,7 @@ def main(path):
 
     initial_carbon_zs = [atom[-1] for atom in initial_atoms_arr if float(atom[0]) == 1]
     final_carbon_zs = [atom[-1] for atom in final_arr if float(atom[0]) == 1]
-    print(len(initial_carbon_zs))
-    print(len(final_carbon_zs))
+
     plt.hist(final_carbon_zs, bins = 25)
     plt.hist(initial_carbon_zs, bins = 25)
 

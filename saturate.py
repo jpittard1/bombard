@@ -95,10 +95,9 @@ def main(path):
     #Use 0 (initial surface hieght) +1 to account for variation in thermal positiosns
     #Use rebo cut off distcance? (2Ang)
 
+    all_carbon_indexes = region_indexes['diamond_bulk'] + region_indexes['diamond_surface']
 
-
-    carbon_zs = [final_arr[index][-1] for index in region_indexes['diamond_bulk'] if final_arr[index][-1] > -2]
-
+    carbon_zs = [final_arr[index][-1] for index in all_carbon_indexes if final_arr[index][-1] > -2]
 
     no_surface_atoms = int(2*settings_dict['replicate'][0]*settings_dict['replicate'][1])
     diamond_surface_zs = sorted(carbon_zs)[0:no_surface_atoms]
@@ -157,7 +156,7 @@ def main(path):
     print("\n\nPROGRESS: Generating results.txt and graphs.") 
 
     results_str = f'Saturate results for {path.split("/")[-2]}\n\n'
-    results_str += f'Surface taken to be at height of {surface_limit}±{surface_limit_err}A.\n\n'
+    results_str += f'Surface limit taken to be at height of {surface_limit}±{surface_limit_err}A.\n\n'
     results_str += 'time, bombard_attempts, d_counter, t_counter, c_counter\n' + str(results_arr)
 
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file

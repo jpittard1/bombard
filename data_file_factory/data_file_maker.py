@@ -177,10 +177,11 @@ def remove_h(xyz_file, to_save_path, name):
     save_str(xyz_file, to_save_path, name, replace = True, xyz = True)
 
 
-def main(desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-1000,1000]]):
+def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], 
+        xyz_file_name = 'rotated_diamond', data_file_name = None):
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    xyz_file = open(f"{current_dir}/0.xyz", 'r')
+    xyz_file = open(f"{current_dir}/{xyz_name}", 'r')
     xyz_file = xyz_file.read()
 
     data_array = xyz_to_array(xyz_file, shift = 'origin', rotate=rotation_deg, limits=limits)
@@ -188,16 +189,16 @@ def main(desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-
     data_file = array_to_datafile(data_array)
     xyz_file = array_to_xyzfile(data_array, current_dir)
 
-    replicate_list = [str(int(i)) for i in desired_replicate]
+    if data_file_name == None:
+        replicate_list = [str(int(i)) for i in desired_replicate]
+        sep = '_'
+        data_file_name = sep.join(replicate_list)
+        data_file_name += f'_{int(rotation_deg[2])}deg'
 
-    sep = '_'
-    name = sep.join(replicate_list)
-    name += f'_{int(rotation_deg[2])}deg'
+    save_str(data_file, current_dir, f"data.{data_file_name}", replace = True)
+    save_str(xyz_file, current_dir, xyz_file_name, replace = True, xyz=True)
 
-    save_str(data_file, current_dir, f"data.{name}", replace = True)
-    save_str(xyz_file, current_dir, 'rotated_diamond', replace = True, xyz=True)
-
-    return name
+    return data_file_name
   
     '''
     xyz_file_name = sys.argv[0]
