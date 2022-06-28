@@ -1,4 +1,6 @@
 
+from ast import Index
+from calendar import c
 import subprocess
 import os
 import tools
@@ -19,10 +21,12 @@ class Track:
 
           self.job_str = self.get_job_details()
 
+          self.new_file_check()
+
           self.publish_details()
 
 
-     def get_ids(self):
+     def get_ids(self, time = False):
 
           current_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -44,7 +48,12 @@ class Track:
           job_ids = [vals[0] for vals in jobs_list if vals[0] != "'"]
           job_ids = [int(i) for i in job_ids]
 
-          return job_ids
+          if time == True:
+               times = [vals[5] for vals in jobs_list if vals[0] != "'"]
+               return job_ids, times
+
+          else:
+               return job_ids
 
      def get_job_details(self):
 
@@ -83,7 +92,7 @@ class Track:
 
      def publish_details(self):
 
-          old_job_file = open(f"{self.dir_path}/jobs.txt", 'r')
+          old_job_file = open(f"{self.dir_path}/current_jobs.txt", 'r')
           old_jobs_str = old_job_file.read()
 
           to_publish = '-'*40
@@ -92,16 +101,71 @@ class Track:
           to_publish += '\n'
           to_publish += old_jobs_str
 
-          with open(f"{self.dir_path}/jobs.txt", 'w') as fp: #is this needed still?
+          with open(f"{self.dir_path}/current_jobs.txt", 'w') as fp: 
                fp.write(to_publish) 
 
+     def new_file_check(self):
+          job_file = tools.file_proc(f"{self.dir_path}/current_jobs.txt", seperator="-"*40)
+          now = datetime.now()
+          
+          try: 
+               date = job_file[-2].split('\n')[2]
+               date = date.split(' ')[0]
+               old_month = date.split('/')[1]
+          except IndexError:
+               old_month = now.strftime("%m")
+
+
+          current_month = now.strftime("%m")
+          current_year = now.strftime("%Y")
+
+
+          if old_month != current_month:
+               os.system(f"mv {self.dir_path}/current_jobs.txt {self.dir_path}/job_history/jobs_{old_month}_{current_year}")
+
+               with open(f"{self.dir_path}/current_jobs.txt", 'w') as fp:
+                    fp.write(' ') 
+
+
+
+
+
+def check_progress(file_name, id):
+
+     
+     job_ids, times = Track.get_ids(self = False, time = True)
+
+     try:
+          index = job_ids.index(int(id))
+          current_time = times[index]
+     except ValueError:
+          return None, None, None
+
+
+     log = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/results/{file_name}/log.lammps", seperator='\n\n') 
+     log = [i for i in log if i != '']
+
+     start = log[0].split('\n')
+     total_loop = int(start[-1].split(' ')[-1])
+
+    
+
+     for index in range(len(log), 0, -1):
+          try:
+               if log[index][0:6] == 'next d':
+                    section = log[index].split('\n')
+                    current_ions = int(section[1][26:30]) - 1
+
+                    return current_ions, total_loop, current_time   
+          except IndexError:
+               pass
 
 
 
 def get_info(job_id):
 
      success = False
-     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/jobs.txt", seperator= "-"*40) 
+     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40) 
 
      for job in jobs:
           job_lines = job.split('\n')
@@ -111,6 +175,30 @@ def get_info(job_id):
                id = job_lines[2].split(' ')[-1]
 
                if int(job_id) == int(id):
+
+                    file_name = job.split('\n')[4][11:]
+                    total_time = job.split('\n')[-4][5:]
+                  
+                    current_ion, total_ion, current_time = check_progress(file_name, job_id)
+
+                    if current_time == None:
+
+                         print("\n\nSimulation Complete.")
+
+                    else:
+                         time_perc = tools.time_percentage(current_time, total_time)
+               
+
+                         print("\n\n")
+                         print(f"On {current_ion} out of {total_ion} ({current_ion*100/total_ion:.3g}%)")
+                         print(f'Running for {current_time} out of {total_time} ({time_perc:.3g}%)')
+                         
+                         bars = int(current_ion*50/total_ion)
+                         print('Ions: |','#'*bars,"_"*(50-bars),'|')
+
+                         bars = int(time_perc/2)
+                         print('Time: |','#'*bars,"_"*(50-bars),'|')
+
                     print(job)
                     success = True
                     break
@@ -118,12 +206,12 @@ def get_info(job_id):
                pass
      
      if success == False:
-          print(f"\nERROR: Could not find {job_id} in jobs.txt.\n")
+          print(f"\nERROR: Could not find {job_id} in current_jobs.txt.\n")
 
 
 def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
-     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/jobs.txt", seperator= "-"*40)
+     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
 
      to_run_file_names = []
 
@@ -179,6 +267,7 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
    
 if __name__ == "__main__":
+
 
      if sys.argv[1] == "-help":
           print("\n\nTo get job info, give job ID as arguemnt.")

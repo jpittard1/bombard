@@ -50,8 +50,8 @@ def closest_to(val, list_):
 def xyz_to_array(xyz_file_path):
 
     xyz_file = file_proc(f"{xyz_file_path}")
-
-    atoms_arr = np.zeros([10000,4])
+    atoms = int(xyz_file[0])
+    atoms_arr = np.zeros([atoms,4])
     indexes = []
 
     for i in xyz_file:
@@ -133,7 +133,7 @@ def array_column_select(arr, columns):
 
 def region_assign(initial, loaded = False):
         
-    initial_atoms_arr = np.zeros([5000,4])
+    initial_atoms_arr = np.zeros([int(initial[0]),4])
     indexes = []
 
     region_indexes = dict(diamond_surface = [], diamond_bulk = [], graphene_all = [],
@@ -272,3 +272,15 @@ def csv_reader(csv_path):
 
     return settings_dict
 
+def time_percentage(current, total):
+
+    def convert_to_seconds(time):
+       
+        times = time.split(':')
+        times = [int(time) for time in times]
+        return times[0]*3600 + times[1]*60 + times[2]
+
+    current_s = convert_to_seconds(current)
+    total_s = convert_to_seconds(total)
+
+    return current_s*100/total_s
