@@ -278,19 +278,14 @@ def time_percentage(current, total):
        
         times = time.split(':')
         times = [int(time) for time in times]
-        print(times)
-        print(len(times))
+
         if len(times) == 3:
-            print(times[0]*3600 + times[1]*60 + times[2])
             return times[0]*3600 + times[1]*60 + times[2]
         if len(times) == 2:
-            print(times[0]*60 + times[1])
             return times[0]*60 + times[1]
 
 
     current_s = convert_to_seconds(current)
     total_s = convert_to_seconds(total)
-
-    print(total_s)
 
     return current_s*100/total_s

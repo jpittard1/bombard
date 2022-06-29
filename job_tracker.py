@@ -188,10 +188,8 @@ def get_info(job_id):
                          print("\n\nSimulation Complete.")
 
                     else:
-                         print("HERE")
                          time_perc = tools.time_percentage(current_time, total_time)
                
-
                          print("\n\n")
                          print(f"On {current_ion} out of {total_ion} ({current_ion*100/total_ion:.3g}%)")
                          print(f'Running for {current_time} out of {total_time} ({time_perc:.3g}%)')
