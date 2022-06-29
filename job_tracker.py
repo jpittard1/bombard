@@ -154,7 +154,9 @@ def check_progress(file_name, id):
           try:
                if log[index][0:6] == 'next d':
                     section = log[index].split('\n')
-                    current_ions = int(section[1][26:30]) - 1
+                    section = section[1].split(' ')  
+                    current_ions = int(section[4]) - 1
+                    
 
                     return current_ions, total_loop, current_time   
           except IndexError:
@@ -186,6 +188,7 @@ def get_info(job_id):
                          print("\n\nSimulation Complete.")
 
                     else:
+                         print("HERE")
                          time_perc = tools.time_percentage(current_time, total_time)
                
 
