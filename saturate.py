@@ -92,7 +92,7 @@ def main(path):
     initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
 
     #at the moment takes carbon atoms from final file, need some sense check to remove carbon atoms above
-    #Use 0 (initial surface hieght) +1 to account for variation in thermal positiosns
+    #Use 0 (initial surface hieght) +2 to account for variation in thermal positiosns
     #Use rebo cut off distcance? (2Ang)
 
     all_carbon_indexes = region_indexes['diamond_bulk'] + region_indexes['diamond_surface']
