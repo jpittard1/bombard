@@ -11,9 +11,10 @@ from datetime import datetime
 
 class Track:
 
-     def __init__(self, file_name):
+     def __init__(self, file_name, srun_name = 'srun'):
 
           self.file_name = file_name
+          self.srun_name = srun_name
           self.dir_path = os.path.dirname(os.path.realpath(__file__))
 
           self.job_ids = self.get_ids()
@@ -60,7 +61,7 @@ class Track:
           settings_dict = tools.csv_reader(f"{self.dir_path}/results/{self.file_name}/settings.csv")
           settings_str = tools.cvs_maker("", settings_dict, write = False)
 
-          srun_file = tools.file_proc(f"{self.dir_path}/results/{self.file_name}/srun")
+          srun_file = tools.file_proc(f"{self.dir_path}/results/{self.file_name}/{self.srun_name}")
 
           srun_str = ''
           node_info = False
@@ -138,11 +139,12 @@ def check_progress(file_name, id):
      try:
           index = job_ids.index(int(id))
           current_time = times[index]
+          if current_time == '0:00':
+               return 0, 0, current_time
      except ValueError:
           return None, None, None
 
-
-     log = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/results/{file_name}/log.lammps", seperator='\n\n') 
+     log = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/results/{file_name}/log.lammps", seperator='\n\n')
      log = [i for i in log if i != '']
 
      start = log[0].split('\n')
@@ -152,12 +154,12 @@ def check_progress(file_name, id):
 
      for index in range(len(log), 0, -1):
           try:
-               if log[index][0:6] == 'next d':
+               line = log[index].split()
+               if line[0] == 'next' and line[1] == 'd':
                     section = log[index].split('\n')
-                    section = section[1].split(' ')  
+                    section = section[2].split(' ') 
                     current_ions = int(section[4]) - 1
-                    
-
+         
                     return current_ions, total_loop, current_time   
           except IndexError:
                pass
@@ -187,11 +189,26 @@ def get_info(job_id):
 
                          print("\n\nSimulation Complete.")
 
+                    
+                    elif current_time == '0:00':
+
+                         print("\n\nSimulation yet to start.")
+
                     else:
                          time_perc = tools.time_percentage(current_time, total_time)
+                         ion_perc = current_ion*100/total_ion
+
+                         current_time_s = tools.time_convert(current_time, time_to_sec=True)
+                         time_remaining_s =  (100/ion_perc - 1)*current_time_s
+                         time_remaining = tools.time_convert(time_remaining_s, sec_to_time=True)
+                         time = datetime.now()
+                         finish_time = tools.time_add(time_remaining, time.strftime("%H:%M:%S"), add=True, time_of_day = True)
+                         estimated_total_time = tools.time_add(current_time, time_remaining)
+
+
                
                          print("\n\n")
-                         print(f"On {current_ion} out of {total_ion} ({current_ion*100/total_ion:.3g}%)")
+                         print(f"On {current_ion} out of {total_ion} ({ion_perc:.3g}%)")
                          print(f'Running for {current_time} out of {total_time} ({time_perc:.3g}%)')
                          
                          bars = int(current_ion*50/total_ion)
@@ -199,6 +216,12 @@ def get_info(job_id):
 
                          bars = int(time_perc/2)
                          print('Time: |','#'*bars,"_"*(50-bars),'|')
+                         print(f'Estimated total time: {estimated_total_time}')
+                         print(f'Estimated time remaining: {time_remaining}')
+                         print(f'Estimated finish time: {finish_time}')
+
+
+              
 
                     print(job)
                     success = True

@@ -2,6 +2,8 @@
 import numpy as np
 import math
 
+from pyrsistent import b
+
 
 def file_proc(file, seperator = "\n"):
     """Short function to split text files into a list of lines"""
@@ -10,6 +12,66 @@ def file_proc(file, seperator = "\n"):
     opened_file = opened_file.read()
     opened_file = opened_file.split(seperator)
     return opened_file
+
+
+def str_to_arr(string):
+
+    string = string.split('\n')
+
+    for index, line in enumerate(string):
+
+        try:
+            if line[0] == '[':
+                break
+        except IndexError:
+            pass
+
+        try:
+            float(line.split(' ')[0])
+            break
+        except ValueError:
+            try:
+                float(line.split(', ')[0])
+                break
+            except ValueError:
+                pass
+
+
+
+
+    string = string[index:]
+    print(string)
+    print(index)
+    columns = len(string[0].split(' '))
+    arr = np.zeros([len(string), columns])
+
+   
+    if string[0].split(' ')[-2][-1] == ',':
+        commas = True
+
+    for index, line in enumerate(string):
+
+        try:
+            if line[0] == '[':
+                line = line[1:]
+            if line[-1] == ']':
+                line = line [:-1]
+        except IndexError:
+            pass
+
+        if commas == True:
+            line = line.split(', ')
+        if commas == False:
+            line = line.split(' ')
+
+        if len(line) > 1:
+            line = [float(i) for i in line]
+            arr[index,:] = np.array(line)
+
+    return arr
+
+
+
 
 def str_to_list(string, float_vals = False):
 
@@ -46,6 +108,40 @@ def closest_to(val, list_):
     return list_[abs_vals.index(min(abs_vals))]
 
 
+
+def time_convert(val, time_to_sec = False, sec_to_time = False, time_of_day = False):
+    if time_to_sec == True:
+        hh_mm_ss = val.split(':')
+        hh_mm_ss.reverse()
+        secs = [float(val)*(60**index) for index,val in enumerate(hh_mm_ss)]
+        return sum(secs)
+    
+    if sec_to_time == True:
+        if time_of_day == True:
+            hh = str(int(val/3600)%24)
+        else:
+            hh = str(int(val/3600))
+        mm = str(int((val%3600)/60))
+        ss = str(int((val%3600)%60))
+
+        if len(hh) != 2:
+            hh = '0' + hh
+        if len(mm) != 2:
+            mm = '0' + mm
+        if len(ss) != 2:
+            ss = '0' + ss
+
+        return f"{hh}:{mm}:{ss}"
+
+def time_add(time1_str, time2_str, add = True, subtract = False, time_of_day = False):
+    time1 = time_convert(time1_str, time_to_sec=True)
+    time2 = time_convert(time2_str, time_to_sec=True)
+
+    if add == True:
+        return time_convert(time1+time2, sec_to_time=True, time_of_day=time_of_day)
+
+    if subtract == True:
+        return time_convert(time1-time2, sec_to_time=True, time_of_day=time_of_day)
 
 def xyz_to_array(xyz_file_path):
 

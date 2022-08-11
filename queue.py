@@ -2,12 +2,8 @@
 
 
 import os
-from re import S 
-import time
 import shutil
 import random
-import numpy as np
-import pprint
 
 import graphene_maker as gmak
 import tools
@@ -27,27 +23,29 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 
 results_dir_name = 'results'
 loaded = False
-grain = False
-multi_bombard = True
+grain = True
+multi_bombard = False
 energy = 30
-test = True
-hpc = False
-temp = 400
+test = False
+hpc = True
+temp = 300
 
 if loaded == True:
-    replicate = ['8','8','6']
+    virtual_replicate = ['8','8','6']
     input_file_name = 'in.loaded_multi_bombard'
 if grain == True:
-    replicate = ['1','1','1']
+    virtual_replicate = ['6','6','8']
     input_file_name = 'in.grain_multi_bombard'
 if multi_bombard == True:
+    virtual_replicate = None
     input_file_name = 'in.multi_bombard_para'
 
-pre_bomb_run_val = '1000' #this is changed if test == True, so must be changed here
+pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
-bomb_run_val = "1000" #this is automatically increase for slow particles and must be
+bomb_run_val = "10000" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
-number_of_particles = '5' #bombarding
+post_bomb_run_val = '100000'
+number_of_particles = '500' #bombarding
 
 if test == True:
     number_of_particles = '5'
@@ -67,7 +65,7 @@ if test == True:
 in_file = tools.file_proc("%s/%s"%(lammps_files_path, input_file_name))           
 
 paths = []
-data_files = []
+data_files = ['data.graphite_sheet']
     
 
 #Better way would be to just turn every line into a dict, with the first word the key, then can look up
@@ -225,17 +223,17 @@ for i in in_file: #goes through the input file line by line both reading and edi
         if i[0] == '#number_of_sheets':
             graphite_sheets = float(i[1])
 
-        if i[0] == '#atom_type': #either 'h', 'd' or 't'
+        elif i[0] == '#atom_type': #either 'h', 'd' or 't'
             atom_type = i[1]
 
-        if i[0] == '#diamond_type':
+        elif i[0] == '#diamond_type':
             diamond_type = i[1]
 
-        if i[0] == "variable":
+        elif i[0] == "variable":
             i[-1] = str(number_of_particles)
             in_file[index] = seperator.join(i)     
 
-        if i[0] == 'read_data':
+        elif i[0] == 'read_data':
             
             file_path = i[1].split('/')
 
@@ -267,12 +265,12 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
                 primary_data_file_bool = False
 
-        if i[0] == 'pair_coeff':
+        elif i[0] == 'pair_coeff':
 
             i[3] = "%s/CH.rebo"%lammps_files_path #setting file paths for lammps files
             in_file[index] = seperator.join(i)
 
-        if i[0] == "set": #setting velocity line
+        elif i[0] == "set" and i[-2] == 'vz': #setting velocity line
     
             if atom_type == 'h':
                 atom_mass = 1.0079
@@ -291,15 +289,16 @@ for i in in_file: #goes through the input file line by line both reading and edi
             in_file[index] = seperator.join(i)
         
         
-        if i[0] == "replicate":
+        elif i[0] == "replicate":
+    
             replicate = i[1:]
 
             in_file[index] = seperator.join(i)
 
-        if i[0] == "create_atoms":
+        elif i[0] == "create_atoms":
 
             if atom_type == 'd':
-                i[1] = '2'
+                i[1] = '3'
 
             if atom_type == 't':
                 i[1] = '3'
@@ -308,7 +307,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
 
 
-        if i[0] == "fix" and len(i[-1]) == 5: #changing random seed for each repeat
+        elif i[0] == "fix" and len(i[-1]) == 5: #changing random seed for each repeat
             rand = random.randint(10000,99999)
             i[-1] = str(rand)
             i[4] = str(temp)
@@ -317,7 +316,12 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
             in_file[index] = seperator.join(i)
 
-        if i[0] == "velocity" and i[1] == 'all' and i[2] == 'create': #changing random seed for each repeat
+        elif i[0] == 'fix' and i[3] == 'nvt':
+            i[-2] = str(temp)
+            i[-3] = str(temp)
+            in_file[index] = seperator.join(i)
+
+        elif i[0] == "velocity" and i[1] == 'all' and i[2] == 'create': #changing random seed for each repeat
             rand = random.randint(10000,99999)
             i[4] = str(rand)
             i[3] = str(temp)
@@ -325,7 +329,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
             in_file[index] = seperator.join(i)
 
     
-        if i[0] == "compute":
+        elif i[0] == "compute":
             steinhardt_line = i
             steinhardt_degrees = [4,6,8,10,12]
 
@@ -347,7 +351,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
         ##### Or maybe it looks at first data file and takes the values, then have areplicate 1 1 1 lien which multplies it whatever
 
 
-        if i[0] == 'region' and i[1] == 'box': 
+        elif i[0] == 'region': 
 
             x_width = abs(prim_xhi - prim_xlo)*float(replicate[0])
             y_width = abs(prim_yhi - prim_ylo)*float(replicate[1])
@@ -355,9 +359,20 @@ for i in in_file: #goes through the input file line by line both reading and edi
             x_lo, x_hi = [prim_xlo, prim_xhi*float(replicate[0])]
             y_lo, y_hi = [prim_ylo, prim_yhi*float(replicate[1])]
 
-            graphene_thickness = 3.35
-            z_hi = -graphene_thickness*graphite_sheets - 25
-            z_lo = z_hi - 30
+
+            if i[1] == 'box':
+                graphene_thickness = 3.35
+                z_hi = -graphene_thickness*graphite_sheets - 25
+                z_lo = z_hi - 30
+            elif i[1] == '1':
+                z_lo = 0
+                z_hi = (float(replicate[2]) + 2)*3.567
+            elif i[1] == 'base':
+                z_lo = 8 
+                z_hi = 70
+            else:
+                z_lo = i[-2]
+                z_hi = i[-1]
             
             i = seperator.join(i[:3]) + " %s %s %s %s %s %s"%(x_lo, x_hi, y_lo, y_hi, z_lo, z_hi)
 
@@ -365,17 +380,17 @@ for i in in_file: #goes through the input file line by line both reading and edi
 
 
 
-        if i[0] == 'run' and i[2] == "#inbetween": 
-            
-            i[1] = bomb_run_val
+        elif i[0] == 'run':
+            if i[2] == "#inbetween": 
+                i[1] = bomb_run_val
+            elif i[2] == '#prebombardment':
+                i[1] = pre_bomb_run_val
+            elif i[2] == '#postbombardment':
+                i[1] = post_bomb_run_val
 
             in_file[index] = seperator.join(i)
 
-        if i[0] == 'run' and i[2] == '#prebombardment':
-
-            i[1] = pre_bomb_run_val
-
-            in_file[index] = seperator.join(i)
+  
 
 
     except IndexError:                                    
@@ -397,7 +412,8 @@ print("\n\nPROGRESS: New input file generated.")
 ################### Creating Graphene Data file and new directorys ######################
 #########################################################################################
 
-
+if multi_bombard == True:
+    virtual_replicate = replicate
 
 
 #writes graphene data sheet for the specific simulation
@@ -407,6 +423,8 @@ print("\n\nPROGRESS: New input file generated.")
 ###TODO bulk atoms dict incorrect (need to make it less reliant on replicate)
 bulk_atoms_dict = gmak.main(data_file_path = "%s/data.graphite_sheet"%lammps_files_path, no_bombarding_atoms = number_of_particles, 
                             replicate = replicate, no_of_sheets = graphite_sheets, atom_mass = atom_mass)
+
+bulk_atoms_dict =  dict(diamond = 8*int(replicate[0])*int(replicate[1])*int(replicate[2]), graphene = 0)
 
 print("\n\nPROGRESS: Graphene Data file generated.")
 
@@ -439,7 +457,8 @@ shutil.copyfile("%s/%s"%(lammps_files_path, input_file_name), "%s/%s"%(new_path,
 
 
 settings_dict = dict(no_bombarding_atoms = number_of_particles, 
-                    replicate = replicate, 
+                    replicate = replicate,
+                    virtual_replicate = virtual_replicate, 
                     surface_area = float(x_width*y_width),
                     no_of_sheets = graphite_sheets, 
                     atom_mass = atom_mass,
@@ -450,6 +469,7 @@ settings_dict = dict(no_bombarding_atoms = number_of_particles,
                     atom_type = atom_type,
                     pre_bombard_time = pre_bomb_run_val,
                     bombard_time = bomb_run_val,
+                    post_bombard_time = post_bomb_run_val,
                     loaded = loaded,
                     grain = grain,
                     multi_bombard = multi_bombard,
