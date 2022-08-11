@@ -12,7 +12,7 @@ def main(path):
 
     print("\n\n")
     print("-"*60)
-    print("\nNOTE: This will delete the xyz_files dir and all other .xyz files except "
+    print("\nNOTE: This will delete the xyz_files dir and all other .xyz and .para files except "
                     "all.xyz and jmol_all.xyz in: \n%s\n\n"%path)
     cont_yn = tools.input_misc("Do you wish to continue (y/n): ", ['y','n'])
     print("\n")
@@ -22,6 +22,11 @@ def main(path):
         
         try:
             shutil.rmtree("%s/xyz_files"%path) 
+        except FileNotFoundError:
+            pass
+
+        try:
+            shutil.rmtree("%s/steinhardt_files"%path) 
         except FileNotFoundError:
             pass
  

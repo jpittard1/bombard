@@ -1,14 +1,15 @@
 
-from math import degrees
-from multiprocessing.sharedctypes import Value
 import steinhardt
 import tools
-import data_file_maker
 
 import os
 import sys
 import matplotlib.pyplot as plt
 import pprint
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(f"{current_dir}/data_file_factory")
+import data_file_maker
 
 class Steinhardt_Frame:
 
@@ -18,6 +19,7 @@ class Steinhardt_Frame:
         
 
     def convert_to_datafile(self, path, name):
+        print(f"\n\n{path}/{self.xyz_file}\n\n")
         data_file_maker.remove_h(self.xyz_file, path, name)
 
     def change_paras(self, path, q_paras):
@@ -176,51 +178,52 @@ if __name__ == '__main__':
 
     try:
         steinhardt_settings_dict['file'] = sys.argv[1]
-
-        for arg in sys.argv[2:]:
-            
-            arg = arg.split('-')
-
-            if len(arg) == 1:
-                print("\nERROR: Input arguments as: frames-4 etc.\n")
-                fail = True
-                break
-            
-            try:
-                x = steinhardt_settings_dict[arg[0]]
-            except KeyError:
-                print(f"\nERROR: {arg[0]} is an invalid arguments.")
-                print("\nDefault arguments: ")
-                pprint.pprint(steinhardt_settings_dict)
-                fail = True
-                break
-            
-            try:
-                steinhardt_settings_dict[arg[0]] = tools.str_to_bool(arg[1])
-            except TypeError:
-                try:
-                    steinhardt_settings_dict[arg[0]] = tools.str_to_float(arg[1])
-                except TypeError:
-                    try:
-                        steinhardt_settings_dict[arg[0]] = tools.str_to_list(arg[1], float_vals = True)
-                    except TypeError:
-                        steinhardt_settings_dict[arg[0]] = arg[1]
-                    
-                    
-            if len(steinhardt_settings_dict['timesteps']) != 0:
-                steinhardt_settings_dict['frames'] = len(steinhardt_settings_dict['timesteps'])
-
-
-        if fail == False:
-            main(steinhardt_settings_dict)
-
-        
-
     except IndexError:
         print("\nERROR: No Filename Provided.")
         print("\nDefault arguments: ")
         pprint.pprint(steinhardt_settings_dict)
         print("\nzlims only applied if reference_gen is True.\n")
+        fail = True
+
+    for arg in sys.argv[2:]:
+        
+        arg = arg.split('-')
+
+        if len(arg) == 1:
+            print("\nERROR: Input arguments as: frames-4 etc.\n")
+            fail = True
+            break
+        
+        try:
+            x = steinhardt_settings_dict[arg[0]]
+        except KeyError:
+            print(f"\nERROR: {arg[0]} is an invalid arguments.")
+            print("\nDefault arguments: ")
+            pprint.pprint(steinhardt_settings_dict)
+            fail = True
+            break
+        
+        try:
+            steinhardt_settings_dict[arg[0]] = tools.str_to_bool(arg[1])
+        except TypeError:
+            try:
+                steinhardt_settings_dict[arg[0]] = tools.str_to_float(arg[1])
+            except TypeError:
+                try:
+                    steinhardt_settings_dict[arg[0]] = tools.str_to_list(arg[1], float_vals = True)
+                except TypeError:
+                    steinhardt_settings_dict[arg[0]] = arg[1]
+                
+                
+        if len(steinhardt_settings_dict['timesteps']) != 0:
+            steinhardt_settings_dict['frames'] = len(steinhardt_settings_dict['timesteps'])
+
+
+    if fail == False:
+        main(steinhardt_settings_dict)
+
+    
+
         
 
 

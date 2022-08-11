@@ -77,8 +77,9 @@ def main(all_xyz_file_path):
         time_step_data.remove('')
  
         time = float(time_step_data[0])
+        max_atoms = int(settings_dict['replicate'][0]*settings_dict['replicate'][1]*settings_dict['replicate'][2]*8 + settings_dict['no_bombarding_atoms'])
         
-        atoms_arr = np.zeros([10000,4])
+        atoms_arr = np.zeros([max_atoms,4])
 
         indexes = []
 
@@ -92,9 +93,9 @@ def main(all_xyz_file_path):
                 indexes.append(index)
 
    
-        atoms = max(indexes) + 1
+        counted_atoms = max(indexes) + 1
       
-        frame = Frame(time, atoms, atoms_arr)
+        frame = Frame(time, counted_atoms, atoms_arr)
         frames.append(frame)
 
 

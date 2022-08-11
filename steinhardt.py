@@ -49,6 +49,8 @@ def averages(arrays, center_only = False, zlims = None):
     
     avg_dict = dict()
 
+     
+
     for index in range(1, 6):
         degree = int(index*2 + 2)
 
@@ -103,7 +105,7 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
     titles = ['z'] + [f"Q{int(degree)}" for degree in degrees]
     
     for column in range(1, arrays[0].shape[1]):
-        print(f"Plotting {titles[column]}...")
+
         for array in arrays:
 
             zs = list(array[:,0])
@@ -122,7 +124,7 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
             while z_lo_lim <= max(zs):
 
                 selected_zs = [z for z in zs if z < z_hi_lim and z > z_lo_lim ]
-                print(len(selected_zs))
+              
 
                 if len(selected_zs) >= 20:
 
@@ -134,7 +136,7 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
 
                     bins.append(tools.avg(selected_zs)[0])
                     avgs.append(avg)
-                    print(f"{titles[column]} {avg[0]} ± {avg[1]})")
+            
 
 
                 z_lo_lim += bin_size
@@ -252,7 +254,7 @@ def main(path, time_animation = False, times_to_plot = []):
     
     #depth_profile(file_arrs, path, settings_dict, times_to_plot)
     
-    avg_str = averages(file_arrs)
+    avg_str, x, y = averages(file_arrs)
 
     with open(f"{path}/graphene_para_averages.txt", 'w') as fp: #rewriting edited input file
         fp.write(avg_str) 
@@ -280,7 +282,7 @@ if __name__ == "__main__":
     #dir_name = 'graphene_para'
 
     path = current_dir + '/results/' +  dir_name
-    print(path)
+
     main(path, time_animation = time_animation)
 
 

@@ -60,8 +60,6 @@ def main(path):
 
 
 
-
-
     #diamond_surface_zs = [final_arr[index][-1] for index in region_indexes['diamond_surface']]
 
     #surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [])

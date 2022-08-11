@@ -482,9 +482,11 @@ if __name__ == "__main__":
         file_name = path.split('/')[-1]
         os.system(f"python jmol_convert.py {file_name}")
         os.system(f"python depth.py {file_name}")
+        os.system(f"python depth_02.py {file_name}")
         os.system(f"python damage.py {file_name}")
         os.system(f"python saturate.py {file_name}")
         os.system(f"python steinhardt.py {file_name}")
+        os.system(f"python temp_tracker.py {file_name}")
 
 
     file_paths = open(f"{dir_path}/results/file_path.txt", 'r')
