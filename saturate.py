@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import tools
+from surface import Surface_finder
 
 
 
@@ -68,7 +69,7 @@ def main(path):
 
     jmol_all_xyz = jmol_all_xyz.split("\n\n")
 
-    results_arr = np.zeros([len(jmol_all_xyz) - 1, 5])
+    results_arr = np.zeros([len(jmol_all_xyz) - 1, 7])
 
     final = False
 
@@ -89,23 +90,50 @@ def main(path):
     except KeyError:
         pass
 
-    initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
+    initial_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
 
     #at the moment takes carbon atoms from final file, need some sense check to remove carbon atoms above
     #Use 0 (initial surface hieght) +2 to account for variation in thermal positiosns
     #Use rebo cut off distcance? (2Ang)
 
-    all_carbon_indexes = region_indexes['diamond_bulk'] + region_indexes['diamond_surface']
+    #all_carbon_indexes = region_indexes['diamond_bulk'] + region_indexes['diamond_surface']
 
-    carbon_zs = [final_arr[index][-1] for index in all_carbon_indexes if final_arr[index][-1] > -2]
+    #carbon_zs = [final_arr[index][-1] for index in all_carbon_indexes if final_arr[index][-1] > -2]
 
-    no_surface_atoms = int(2*settings_dict['replicate'][0]*settings_dict['replicate'][1])
-    diamond_surface_zs = sorted(carbon_zs)[0:no_surface_atoms]
+    #no_surface_atoms = int(2*settings_dict['replicate'][0]*settings_dict['replicate'][1])
+    #diamond_surface_zs = sorted(carbon_zs)[0:no_surface_atoms]
 
-    surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
+    #surfaces = dict(diamond_surface = tools.avg(diamond_surface_zs), graphene_1 = [None,None])
 
-    surface_limit = surfaces["diamond_surface"][0] - 2
-    surface_limit_err = surfaces["diamond_surface"][1]
+    #surface_limit = surfaces["diamond_surface"][0] - 2
+    #surface_limit_err = surfaces["diamond_surface"][1]
+
+    initial_carbon_xs = [row[-3] for row in initial_arr if row[-4] == 1]
+    initial_carbon_ys = [row[-2] for row in initial_arr if row[-4] == 1]
+    final_carbon_zs = [row[-1] for row in final_arr if row[-4] == 1]    
+
+    if all([int(i) for i in settings_dict['replicate']]) == 1:
+        try:
+            surface_unit_cells = int(settings_dict['virtual_replicate'][0]*settings_dict['virtual_replicate'][1])
+            surface_area = None
+        except KeyError:
+            surface_area = (max(initial_carbon_xs) - min(initial_carbon_xs))*(max(initial_carbon_ys)-min(initial_carbon_ys))
+            surface_unit_cells = None
+    else:
+        surface_unit_cells = int(settings_dict['replicate'][0]*settings_dict['replicate'][1])
+        surface_area = None
+
+
+
+    surface_cut_off = 0
+
+    surface_finder = Surface_finder(final_carbon_zs, surface_area_unit_cells=surface_unit_cells, surface_area=surface_area)
+    surface_finder.find_carbon(final_carbon_zs)
+    surface_finder.find_surface(surface_cut_off, carbon_density = False, averaging = False)
+
+    surface_limit = surface_finder.surface - 2
+    surface_limit_err = surface_finder.surface_err
+    
 
 
     ##############################################################################
@@ -144,9 +172,22 @@ def main(path):
 
             if line[0] == '3' and float(line[-1]) > surface_limit:
                 t_counter += 1
-        
 
-        results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter, c_counter])
+        if i1 == 0:
+            initial_c = c_counter
+        
+        if bombard_attempts !=  0:
+            sputt_yield = (initial_c - c_counter)/(bombard_attempts)
+        else:
+            sputt_yield = 0
+
+        if bombard_attempts !=  0:
+            ref_yield = (bombard_attempts - (d_counter+t_counter))/(bombard_attempts)
+        else:
+            ref_yield = 1
+
+
+        results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield])
 
     try:
         os.mkdir("%s/saturate_results/"%settings_path)
@@ -157,7 +198,13 @@ def main(path):
 
     results_str = f'Saturate results for {path.split("/")[-2]}\n\n'
     results_str += f'Surface limit taken to be at height of {surface_limit}±{surface_limit_err}A.\n\n'
-    results_str += 'time, bombard_attempts, d_counter, t_counter, c_counter\n' + str(results_arr)
+    results_str += 'time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield\n' 
+    comma = ', '
+    for row in results_arr:
+        row_list = [str(i) for i in row]
+        results_str += comma.join(row_list)
+        results_str += '\n'
+        
 
     with open("%s/saturate_results/saturate.txt"%settings_path, 'w') as fp: #rewriting edited input file
         fp.write(str(results_str))
@@ -176,6 +223,8 @@ def main(path):
     deuterium = results_arr[:,2].flatten()
     tritium = results_arr[:,3].flatten()
     carbon = results_arr[:,4].flatten()
+    sputt = results_arr[:,5].flatten()
+    reflect = results_arr[:,6].flatten()
 
     plt.plot(fluence, deuterium)
     plt.plot(fluence, tritium)
@@ -184,6 +233,14 @@ def main(path):
     plt.ylabel("Particles")
     plt.xlabel(x_title)
     plt.savefig("%s/saturate_results/attempts.png"%settings_path)
+    plt.close()
+
+    plt.plot(fluence, sputt)
+    plt.plot(fluence, reflect)
+    plt.legend(["Sputtering", "Reflection"])
+    plt.ylabel("Yield")
+    plt.xlabel(x_title)
+    plt.savefig("%s/saturate_results/sputtering_yield.png"%settings_path, dpi = 300)
     plt.close()
 
     plt.plot(times, deuterium)
