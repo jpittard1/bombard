@@ -4,9 +4,9 @@ LAMMPS data file from restart file: timestep = 1, procs = 1
 
 2 atom types
 
-0 14.268 xlo xhi
-0 14.268 ylo yhi
--0.0 21.402 zlo zhi
+0 3.567 xlo xhi
+0 3.567 ylo yhi
+-0.0 5.3505 zlo zhi
 
 Masses
 

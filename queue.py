@@ -23,9 +23,9 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 
 results_dir_name = 'results'
 loaded = False
-grain = True
-multi_bombard = False
-energy = 30
+grain = False
+multi_bombard = True
+energy = 100
 test = False
 hpc = True
 temp = 300
@@ -34,7 +34,7 @@ if loaded == True:
     virtual_replicate = ['8','8','6']
     input_file_name = 'in.loaded_multi_bombard'
 if grain == True:
-    virtual_replicate = ['6','6','8']
+    virtual_replicate = ['8','8','12']
     input_file_name = 'in.grain_multi_bombard'
 if multi_bombard == True:
     virtual_replicate = None
@@ -229,7 +229,7 @@ for i in in_file: #goes through the input file line by line both reading and edi
         elif i[0] == '#diamond_type':
             diamond_type = i[1]
 
-        elif i[0] == "variable":
+        elif i[0] == "variable" and i[2] == "uloop":
             i[-1] = str(number_of_particles)
             in_file[index] = seperator.join(i)     
 

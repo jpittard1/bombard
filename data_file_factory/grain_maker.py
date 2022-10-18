@@ -123,6 +123,7 @@ def minimise_grain(data_file_name):
 def main(desired_final_size, rotation_deg):
 
     desired_replicate = [int(desired_final_size[1]),int(desired_final_size[0]/2), int(desired_final_size[2])]
+    
 
     block_size_dict, limits_list = box_checker.main(desired_replicate, rotation_deg)
 
@@ -139,13 +140,14 @@ def main(desired_final_size, rotation_deg):
 
     data_file_name = dfm.main(last_file, [0,0,0], [0,0,0], xyz_file_name='min_grain', data_file_name = f'min_grain_{int(rotation[2])}deg')
 
+    dir_name = f'{desired_replicate[0]}_{desired_replicate[1]*2}_{desired_replicate[2]}_{int(rotation[2])}'
     
     os.system(f"mkdir xyz_files")
     os.system(f"mv *xyz xyz_files/")
-    os.system(f"mkdir {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
-    os.system(f"mv data.* {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
-    os.system(f"mv xyz_files/ {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
-    os.system(f"mv log.lammps {desired_replicate[0]}_{desired_replicate[1]}_{desired_replicate[2]}_{int(rotation[2])}deg")
+    os.system(f"mkdir {dir_name}deg")
+    os.system(f"mv data.* {dir_name}deg")
+    os.system(f"mv xyz_files/ {dir_name}deg")
+    os.system(f"mv log.lammps {dir_name}deg")
     
     
 if __name__ == '__main__':

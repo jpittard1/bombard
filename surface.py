@@ -1,9 +1,10 @@
 
-from smtplib import SMTPAuthenticationError
+from urllib.request import HTTPDigestAuthHandler
 import tools
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 
 class Surface_finder:
@@ -23,14 +24,14 @@ class Surface_finder:
             raise AttributeError
 
 
-    def find_surface(self, cutoff, carbon_density = False, averaging = True):
+    def find_surface(self, cutoff, ion_cut_off = -2, carbon_density = False, averaging = True):
 
         if carbon_density == True:
             cutoff = self.carbon_densities[2]
 
-        carbon_bulk_zs = [z for z in self.carbon_zs if z > cutoff]
 
         if averaging == True:
+            carbon_bulk_zs = [z for z in self.carbon_zs if z > cutoff]
             no_surface_atoms = 2*self.surface_area_unit_cells
             diamond_surface_zs = sorted(carbon_bulk_zs)[0:no_surface_atoms]
 
@@ -40,11 +41,12 @@ class Surface_finder:
             surface = [cutoff, 0]
 
         setattr(self, 'surface', surface[0])
+        setattr(self, 'ion_cut_off', surface[0] + ion_cut_off)
         setattr(self, 'surface_err', surface[1])
         setattr(self, 'surface_cut_off', cutoff)
 
 
-    def density(self, zs, average_zone_unit_cells = 0.5, resolution = 0.1, cut_off_density_frac = 0.25):
+    def density(self, zs, average_zone_unit_cells = 0.5, resolution = 0.1, cut_off_density_frac = 0.5, data_point_average = 20):
 
         zs.sort()
 
@@ -54,35 +56,52 @@ class Surface_finder:
 
         high_lim = top
         low_lim = top - thickness
-
+       
         heights = []
         densities = []
+ 
 
-       
+        volume = thickness*self.surface_area
+        start_index = 0
+
         while low_lim >= bottom:
-
+            
             section = [atom_z for atom_z in zs if atom_z < high_lim and atom_z > low_lim]
-            density = len(section)/(thickness*self.surface_area)
-   
-            height = (high_lim + low_lim)/2
 
-    
-            densities.append(density)
-            heights.append(height)
+            densities.append(len(section)/volume)
+            heights.append(low_lim)
 
             high_lim += -resolution
             low_lim += -resolution
 
-        try:
-            etched_carbon = [rho for rho in densities if rho < cut_off_density_frac*0.175]
-            bulk_carbon = [rho for rho in densities if rho > cut_off_density_frac*0.175]
-            cut_off_z = heights[densities.index(max(etched_carbon))]
-            #top_heights = [z for z in heights if z < 15]
-            #cut_off_z = top_heights[densities.index(min(bulk_carbon))]
-    
-        except ValueError:
-            cut_off_z = None
 
+        etched_carbon = [rho for rho in densities if rho < cut_off_density_frac*0.175]
+
+        #print(densities.index(min(bulk_carbon)))
+        #print(heights[densities.index(min(bulk_carbon))])
+        #cut_off_z = heights[densities.index(max(etched_carbon))]
+
+        surface_found = False
+        begin_checking = False
+
+        for index, z in enumerate(heights):
+            if tools.avg(densities[index-data_point_average:index])[0] < cut_off_density_frac*0.175:     
+                cut_off_z = z
+                surface_found = True
+                break
+
+        if surface_found == False:
+            cut_off_z = min(heights)
+
+        #top_heights = [z for z in heights if z < 20]
+        #top_densities = densities[0:len(top_heights)] 
+        #bulk_carbon = [rho for rho in top_densities if rho > cut_off_density_frac*0.175]
+    
+        #indices = [index for index, density in enumerate(top_densities) if density == min(bulk_carbon)]
+
+        #cut_off_heights = [top_heights[index] for index in indices]
+        #cut_off_z = min(cut_off_heights)
+     
 
         return heights, densities, cut_off_z
         
@@ -93,8 +112,8 @@ class Surface_finder:
         return initial_cutoff
 
     
-    def find_carbon(self, carbon_zs):
-        heights, densities, cut_off_z = self.density(carbon_zs, cut_off_density_frac=0.448)
+    def find_carbon(self, carbon_zs, cut_off_density_frac):
+        heights, densities, cut_off_z = self.density(carbon_zs, cut_off_density_frac=cut_off_density_frac)
         setattr(self, 'carbon_densities', [heights, densities, cut_off_z])
 
 
@@ -140,7 +159,7 @@ class Surface_finder:
             legend.append('Surface')
 
         if ion_cut_off == True:
-            plt.vlines(self.surface - 2, -0.01, max(self.carbon_densities[1]), colors = 'r')
+            plt.vlines(self.ion_cut_off, -0.01, max(self.carbon_densities[1]), colors = 'r')
             legend.append('Ion Cutoff')
         
         plt.ylim(-0.01)
@@ -189,13 +208,13 @@ class Surface_finder:
             for i2, item in enumerate(column):
                 arr[i2,i1] = item
 
-        results_str = ''
-        for title in column_titles:
-            results_str += title + ', '
+        comma  = ', '
+        results_str = comma.join(column_titles)
 
         for row in arr:
-            row = [float(f"{item:.6g}") for item in row]
-            results_str += '\n' + str(row)
+            results_str += '\n'
+            row_list = [f"{item:.6g}" for item in row]
+            results_str += comma.join(row_list)
 
 
         with open("%s/densities.txt"%path, 'w') as fp: #rewriting edited input file

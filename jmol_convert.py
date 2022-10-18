@@ -77,7 +77,7 @@ def main(all_xyz_file_path):
         time_step_data.remove('')
  
         time = float(time_step_data[0])
-        max_atoms = int(settings_dict['replicate'][0]*settings_dict['replicate'][1]*settings_dict['replicate'][2]*8 + settings_dict['no_bombarding_atoms'])
+        max_atoms = int(settings_dict['virtual_replicate'][0]*settings_dict['virtual_replicate'][1]*settings_dict['virtual_replicate'][2]*8 + settings_dict['no_bombarding_atoms'])
         
         atoms_arr = np.zeros([max_atoms,4])
 
@@ -85,14 +85,17 @@ def main(all_xyz_file_path):
 
         for i in time_step_data:
             line = i.split()
-            if len(line) == 5: #store in array much faster
+            if len(line) == 7:
+            #if len(line) == 5: #store in array much faster
                 index = int(line[0]) - 1 #so atom 1 is at 0th index
                 atom_type_no = int(line[1])
                 atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
  
                 indexes.append(index)
 
-   
+        #indices_to_remove = [index for index, val in enumerate(atoms_arr[:,0]) if val == 0]
+        #atoms_arr = np.delete(atoms_arr, indices_to_remove, axis = 0)
+        
         counted_atoms = max(indexes) + 1
       
         frame = Frame(time, counted_atoms, atoms_arr)
@@ -107,6 +110,7 @@ def main(all_xyz_file_path):
     jmol_str = ''
     for frame in frames:
         jmol_str += frame.present_arr(jmol=True)
+
 
     print("\n\nPROGRESS: Generating xyz files.") 
 

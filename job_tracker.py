@@ -164,6 +164,8 @@ def check_progress(file_name, id):
           except IndexError:
                pass
 
+     return 0,  total_loop, current_time
+
 
 
 def get_info(job_id):
@@ -193,6 +195,10 @@ def get_info(job_id):
                     elif current_time == '0:00':
 
                          print("\n\nSimulation yet to start.")
+
+                    elif current_ion == 0:
+
+                         print("\n\nNo ion bombardments yet.")
 
                     else:
                          time_perc = tools.time_percentage(current_time, total_time)

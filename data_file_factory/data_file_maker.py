@@ -1,10 +1,10 @@
 
 
 import os
-from pprint import pprint
+import pprint
 import sys
 import numpy as np
-from rotate import Rotate, Shift
+from data_file_factory.rotate import Rotate, Shift
 import matplotlib.pyplot as plt
 
 #take inputs for file and trimming dimensions
@@ -24,7 +24,15 @@ def array_to_datafile(array, file_name = None, path = None):
     output_str += f"{min(array[:,1])*1.01:.4f} {max(array[:,1])*1.01:.4f} xlo xhi\n"
     output_str += f"{min(array[:,2])*1.01:.4f} {max(array[:,2])*1.01:.4f} ylo yhi\n"
     #output_str += f"-5 71.34 zlo zhi\n\n"
-    output_str += f"-50 71.34 zlo zhi\n\n"
+
+    zlo = -50
+    zhi = 71.34
+    if max(array[:,3]) > 71.34:
+        zhi = max(array[:,3])*1.5 
+    if min(array[:,3]) < -50:
+        zlo = min(array[:,3])*1.5 
+  
+    output_str += f"{zlo} {zhi} zlo zhi\n\n"
     output_str += 'Masses\n\n1 12.01\n2 2\n3 3\n\n'
     output_str += 'Atoms\n\n'
     output_str += atom_str
@@ -71,6 +79,7 @@ def save_str(string, path, file_name, replace = False, xyz = False):
 
     with open(new_file_name, 'w') as fp:
         fp.write(string)
+
   
 
 def trim(array, limits):
@@ -104,7 +113,7 @@ def trim(array, limits):
 
 
 
-zlims = 3.567*7
+#zlims = 3.567*7
 
 def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], shift = None, rotate = [0, 0, 0], atom_types = [1,2,3]):
 
@@ -121,7 +130,6 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
         except ValueError:
             pass
 
-    print(xyz_file[start_line:20])
 
     data_array = np.zeros([int(xyz_file[3]), 4])
     counter = 0
@@ -165,12 +173,11 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
     if shift == 'origin':
         data_array = Shift.origin(data_array, round_dp = 4)
 
-    print(data_array)
     return data_array
 
 def remove_h(xyz_file, to_save_path, name):
 
-    data_array = xyz_to_array(xyz_file, atom_types=[1], recentre=False)
+    data_array = xyz_to_array(xyz_file, atom_types=[1])
     data_file = array_to_datafile(data_array)
     xyz_file = array_to_xyzfile(data_array)
     save_str(data_file, to_save_path, name, replace = True)

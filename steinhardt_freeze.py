@@ -7,9 +7,9 @@ import sys
 import matplotlib.pyplot as plt
 import pprint
 
-current_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(f"{current_dir}/data_file_factory")
-import data_file_maker
+#current_dir = os.path.dirname(os.path.realpath(__file__))
+#sys.path.append(f"{current_dir}/data_file_factory")
+import data_file_factory.data_file_maker as data_file_maker
 
 class Steinhardt_Frame:
 

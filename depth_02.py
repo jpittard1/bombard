@@ -92,8 +92,8 @@ def main(path):
 
 
     surface_finder = Surface_finder(final_carbon_zs, surface_area_unit_cells=surface_unit_cells, surface_area=surface_area)
-    surface_finder.find_carbon(final_carbon_zs)
-    surface_finder.find_surface(surface_cut_off, carbon_density = False)
+    surface_finder.find_carbon(final_carbon_zs, cut_off_density_frac=0.5)
+    surface_finder.find_surface(surface_cut_off, ion_cut_off=-2,  carbon_density = True, averaging=False)
     surface_finder.find_ions(final_ion_zs)
     surface_finder.initial(initial_carbon_zs)
 

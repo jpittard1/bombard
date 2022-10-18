@@ -2,7 +2,6 @@
 import numpy as np
 import math
 
-from pyrsistent import b
 
 
 def file_proc(file, seperator = "\n"):
@@ -40,8 +39,7 @@ def str_to_arr(string):
 
 
     string = string[index:]
-    print(string)
-    print(index)
+    
     columns = len(string[0].split(' '))
     arr = np.zeros([len(string), columns])
 

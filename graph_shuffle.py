@@ -17,7 +17,7 @@ import sys
 
 
 
-def copy(all_paths):
+def copy(all_paths, file_target):
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -26,8 +26,8 @@ def copy(all_paths):
         energy = file_name.split('_')[2]
         count = file_name.split('_')[-1]
         family_name = path.split('/')[-3]
-        print(f"cp {dir_path}/results/{path}/temp.png {dir_path}/{target}/{family_name}_{energy}_{count}.png")
-        os.system(f"cp {dir_path}/results/{path}/temp.png {dir_path}/{target}/{family_name}_{energy}_{count}_{index}.png")
+        print(f"cp {dir_path}/results/{path}/{file_target} {dir_path}/{target}/{family_name}_{energy}_{count}.png")
+        os.system(f"cp {dir_path}/results/{path}/{file_target} {dir_path}/{target}/{family_name}_{energy}_{count}_{index}.png")
     #os.system(f"mv {dir_path}/{target}/atom_densities.png"")
 
 
@@ -64,13 +64,13 @@ class Combine:
 
         with open(f"{save_file_path}", 'w') as fp: #rewriting edited input file
             fp.write(csv_str)
-            print(save_file_path)
+       
 
 
             
           
 
-    def depth(self, carbon_initial = False, carbon_final = False, ions = False):
+    def depth(self, carbon_initial = False, carbon_final = False, ions = False, to_save_path = None):
         
         if carbon_final == True:
             file_name = 'carbon_final'
@@ -95,11 +95,11 @@ class Combine:
         to_plot_lists = [[] for i in range(len(self.all_paths)*2)]
         
         legend = []
+        self.all_paths.sort()
         for index, path in enumerate(self.all_paths):
             opened_file = open(f"{dir_path}/results/{path}/depth_results/densities.txt", 'r')
 
-            title = path.split('/')[-2]
-            legend.append(title)
+            legend.append(path.split('/')[-1])
 
             string = opened_file.read()
 
@@ -115,11 +115,22 @@ class Combine:
             to_plot_lists[index*2 + 1] = ys
 
         plt.legend(legend)
+        plt.xlabel('z / A')
+        plt.ylabel('Atom Density / A^-3')
+
+        file_tree = path.split('/')[:-1]
+        sep = '/'
+        file_tree = sep.join(file_tree)
 
         sep = '/'
         path_ending = path.split('/')[:-2]
         path_ending = sep.join(path_ending)
-        plt.savefig(f"{dir_path}/results/{path_ending}/{file_name}_combined.png", dpi = 300)
+
+        if to_save_path == None:
+            to_save_path = f'{dir_path}/results/{file_tree}/{file_name}'
+
+        plt.savefig(f'{to_save_path}{file_name}_combined.png', dpi = 300)
+        print(f'{to_save_path}_combined.png')
         plt.show()
         plt.close()
 
@@ -127,22 +138,20 @@ class Combine:
         for name in legend:
             column_titles.append(f"{name}_heights")
             column_titles.append(f"{name}_densities")
-        self.lists_to_csv(to_plot_lists, f"{dir_path}/results/{path_ending}/{file_name}_combined.csv", column_titles = column_titles)
+        self.lists_to_csv(to_plot_lists, f"{to_save_path}{file_name}_combined.csv", column_titles = column_titles)
 
 
-    def saturate(self, x = 'bombard_attempts', y = 'd_counter'):
+    def saturate(self, x = 'bombard_attempts', y = 'd_counter', to_save_path = None):
 
         dir_path = os.path.dirname(os.path.realpath(__file__))
         to_plot_lists = [[] for i in range(len(self.all_paths)*2)]
 
         
         legend = []
+        self.all_paths.sort()
         for index, path in enumerate(self.all_paths):
-            opened_file = open(f"{dir_path}/results/{path}/saturate_results/saturate.txt", 'r')
-
-            title = path.split('/')[-2]
-            legend.append(title)
-
+            opened_file = open(f"{dir_path}/results/{path}/saturate_02_results/saturate.txt", 'r')
+ 
             string = opened_file.read()
 
             for row in string.split('\n'):
@@ -151,21 +160,45 @@ class Combine:
                     titles = row
                     break
 
+            
+      
             arr = tools.str_to_arr(string)
-
+        
             x_index = titles.index(x)
             y_index = titles.index(y)
-            print(arr.shape)
-            print(x_index, y_index)
+
             xs = arr[:-1,x_index]
             ys = arr[:-1,y_index]
+            print(f"Legened: {path.split('/')[-2]}")
 
+            legend.append(path.split('/')[-1])
 
             plt.plot(xs, ys)
             to_plot_lists[index*2] = xs
             to_plot_lists[index*2 + 1] = ys
-        
+
+        file_tree = path.split('/')[:-1]
+        sep = '/'
+        file_tree = sep.join(file_tree)
+
+        if to_save_path == None:
+            to_save_path = f'{dir_path}/results/{file_tree}/{y}_combined.png'
+  
+        plt.legend(legend)
+        plt.xlabel(x)
+        plt.ylabel(y)
+        plt.savefig(f'{to_save_path}{y}_combined.png', dpi = 300)
+        print(f'Path: {to_save_path}{y}_combined.png')
         plt.show()
+
+        column_titles = []
+        for name in legend:
+            column_titles.append(f"{name}_x")
+            column_titles.append(f"{name}_y")
+        self.lists_to_csv(to_plot_lists, f'{to_save_path}{y}_combined.csv', column_titles = column_titles)
+
+    
+
 
         
 
@@ -180,7 +213,7 @@ class Combine:
             opened_file = open(f"{dir_path}/results/{path}/densities.txt", 'r')
 
             title = path.split('/')[-2]
-            legend.append(title)
+            legend.append(path.split('/')[-1])
 
 
             string = opened_file.read()
@@ -203,7 +236,6 @@ class Combine:
 
 
 
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 target = 'results/testing/size/[8,8,6]/t_0g_30eV_1778_1'
@@ -211,13 +243,16 @@ target = 'results/testing/fixes/nvt/damp_100'
 target = 'results/testing/flux'
 
 target = 'results/testing/size/12_12_6'
-target = 'results/energy'
+target = 'results/final/'
+target = 'results/final/to_compare'
 all_paths = []
 for i in range(0,10):
     sep = '/*'*i
     #layer = glob.glob(f'{dir_path}/{target}{sep}/atom_densities.png')
     #layer = glob.glob(f'{dir_path}/{target}{sep}/depth_results/densities.txt')
     layer = glob.glob(f'{dir_path}/{target}{sep}/depth_results/densities.txt')
+    print(f'{dir_path}/{target}{sep}/jmol_all.xyz')
+
 
     if len(layer) > 0:
         all_paths += layer
@@ -234,7 +269,17 @@ all_paths = [sep.join(path) for path in all_paths]
 #all_paths = [f'testing/size/{file}/depth_results' for file in all_paths]
 
 print(all_paths)
-
+to_save_path = f"{dir_path}/{target}"
 combine = Combine(all_paths)
-#combine.depth(carbon_final = True)
-combine.saturate(y= 'sputt_yield')
+#
+combine.depth(ions = True, to_save_path=to_save_path)
+combine.depth(carbon_final = True, to_save_path=to_save_path)
+
+print(f"Saved to: {to_save_path}")
+combine.saturate(y= 'ref_yield', to_save_path=to_save_path)
+combine.saturate(y= 'sputt_yield', to_save_path=to_save_path)
+combine.saturate(y= 'd_counter', to_save_path=to_save_path)
+combine.saturate(y= 'c_counter', to_save_path=to_save_path)
+combine.saturate(y= 'surface_height', to_save_path=to_save_path)
+#copy(all_paths, 'saturate_results/sputting_yield')
+
