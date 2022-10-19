@@ -207,7 +207,7 @@ def custom_to_dict(dump_path):
     info_array = np.delete(info_array, to_delete, 0)
 
 
-    results_dict = dict(timestep = timestep,
+    results_dict = dict(lammps_timestep = timestep,
                     number_of_atoms = number_of_atoms,
                     column_titles = column_titles,
                     info_array = info_array

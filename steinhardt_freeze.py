@@ -19,7 +19,7 @@ class Steinhardt_Frame:
         
 
     def convert_to_datafile(self, path, name):
-        print(f"\n\n{path}/{self.xyz_file}\n\n")
+ 
         data_file_maker.remove_h(self.xyz_file, path, name)
 
     def change_paras(self, path, q_paras):
@@ -33,7 +33,7 @@ class Steinhardt_Frame:
             line = line.split(' ')
 
             if line[0] == 'compute':
-                line = line[0:4] + ['degrees'] + q_paras + line[4:]
+                line = line[0:4] + ['degrees'] + [f'{len(q_paras)}'] + q_paras + line[4:]
                 print(line)
             
             in_file[index] = seperator.join(line)
@@ -47,7 +47,7 @@ class Steinhardt_Frame:
 
     def generate_paras(self, path, current_dir, q_paras = None):
         
-        if q_paras != None: # wouldnt let me use less than 5 parameters, maybe always have core pararemters and take extras as an argument? or only plot ones required
+        if q_paras != None: 
             self.change_paras(path, q_paras)
 
         os.chdir(path)
@@ -95,11 +95,8 @@ def main(steinhardt_settings_dict):
         times_to_plot = [times[i] for i in timestep_indexes]
 
     elif len(steinhardt_settings_dict['timesteps']) != 0:
-        print(times)
-        print(steinhardt_settings_dict['timesteps'])
         times_to_plot = [tools.closest_to(time,times) for time in steinhardt_settings_dict['timesteps']]
         timestep_indexes = [times.index(time) for time in times_to_plot]
-
 
     xyz_files_to_plot = [all_xyz[i] for i in timestep_indexes]
 
@@ -123,15 +120,25 @@ def main(steinhardt_settings_dict):
 
 
     file_dicts = [tools.custom_to_dict(f"{path}/{frame.time}.para") for frame in frames]
-    file_arrs = [file_dict['info_array'] for file_dict in file_dicts]
+    file_dicts = dict()
 
-    column_indexes, q_paras = frames[0].get_columns(steinhardt_settings_dict['q_paras'])
+    for frame in frames:
+        file_dicts[f'{frame.time}'] = tools.custom_to_dict(f"{path}/{frame.time}.para")
+
+    for i, file_dict in enumerate(file_dicts.values()):
+        file_dict['frame_timestep'] = frames[i].time
+
+    #file_arrs = [file_dict['info_array'] for file_dict in file_dicts.values()]
+
+
+    #column_indexes, q_paras = frames[0].get_columns(steinhardt_settings_dict['q_paras'])
     
 
-    avg_str, avg_dict, full_array = steinhardt.averages(file_arrs, 
-                                    center_only = steinhardt_settings_dict['reference_gen'])
+    avg_str, avg_dict, full_array = steinhardt.averages(file_dicts, 
+                                                        steinhardt_settings=steinhardt_settings_dict)
 
-    steinhardt.histogram(full_array, path)
+
+    steinhardt.histogram(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
 
     array_str = 'z, Q4, Q6, Q8, Q10, Q12\n\n' #read from settings.csv
     for line in full_array:
@@ -145,7 +152,7 @@ def main(steinhardt_settings_dict):
         fp.write(array_str) 
 
 
-    steinhardt.depth_profile(file_arrs, path, times = times_to_plot)
+    steinhardt.depth_profile(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
 
 
     tools.mkdir(f"{path}/graphs")
@@ -159,6 +166,11 @@ def main(steinhardt_settings_dict):
     os.system(f"mv {path}/data.* {path}/lammps_files/")
     os.system(f"mv {path}/in* {path}/lammps_files/")
     os.system(f"mv {path}/log* {path}/lammps_files/")
+
+    for degree in ['Q4','Q6','Q8','Q10','Q12']:
+        tools.mkdir(f"{path}/graphs/{degree}_histograms")
+        os.system(f"mv {path}/graphs/{degree}*histogram.png {path}/graphs/{degree}_histograms/")
+
 
 
 
@@ -178,6 +190,7 @@ if __name__ == '__main__':
 
     try:
         steinhardt_settings_dict['file'] = sys.argv[1]
+        #steinhardt_settings_dict['file'] = 'grain/d_0g_30eV_1000_4'
     except IndexError:
         print("\nERROR: No Filename Provided.")
         print("\nDefault arguments: ")
@@ -221,6 +234,7 @@ if __name__ == '__main__':
 
     if fail == False:
         main(steinhardt_settings_dict)
+        pprint.pprint(steinhardt_settings_dict)
 
     
 

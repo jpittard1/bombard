@@ -118,8 +118,8 @@ def trim(array, limits):
 def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], shift = None, rotate = [0, 0, 0], atom_types = [1,2,3]):
 
     xyz_file = xyz_file.split("\n")
-
-
+    print(xyz_file[0])
+    
     for index, line in enumerate(xyz_file):
         line = line.split(' ')
         try:
@@ -130,8 +130,7 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
         except ValueError:
             pass
 
-
-    data_array = np.zeros([int(xyz_file[3]), 4])
+    data_array = np.zeros([int(xyz_file[0]), 4])
     counter = 0
     for i, line in enumerate(xyz_file[start_line:]):
         line = line.split(' ')
@@ -176,7 +175,7 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
     return data_array
 
 def remove_h(xyz_file, to_save_path, name):
-
+    print('here')
     data_array = xyz_to_array(xyz_file, atom_types=[1])
     data_file = array_to_datafile(data_array)
     xyz_file = array_to_xyzfile(data_array)

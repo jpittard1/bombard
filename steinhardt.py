@@ -1,7 +1,7 @@
 
 
 from asyncore import write
-from distutils.log import error
+from distutils.log import error, info
 from math import degrees
 
 import numpy as np
@@ -24,42 +24,80 @@ import matplotlib.animation as animation
 #Probably store in array or dict. Concerns with dict are keeping the required order in file
 
 
+def combine_time_steps(file_dicts):
+    
 
-def averages(arrays, center_only = False, zlims = None):
+    atoms_across_frames = [file_dict['info_array'].shape[0] for file_dict in file_dicts.values()]
 
-    if zlims == None:
-        zlo, zhi = [10, 25]
-    else:
-        zlo, zhi = zlims
+    keys = [key for key in file_dicts.keys()]
+    all_times = np.zeros([sum(atoms_across_frames), file_dicts[keys[0]]['info_array'].shape[1]])
+    low_lim = 0
+    high_lim =  0
+    for index, file_dict in enumerate(file_dicts.values()): #combining different timestep arrays
+        high_lim += atoms_across_frames[index]
+        all_times[low_lim:high_lim][:] = file_dict['info_array']
+        low_lim += atoms_across_frames[index]
 
-    atoms = arrays[0].shape[0]
-    all_times = np.zeros([len(arrays)*atoms, arrays[0].shape[1]])
+    return dict(frame_timestep = 'all',
+                lammps_timestep = 0,
+                number_of_atoms = sum(atoms_across_frames),
+                column_titles = file_dicts[keys[0]]['column_titles'],
+                info_array = all_times)
 
-    for index, array in enumerate(arrays):
-        all_times[int(atoms*index):int(atoms*(index+1))][:] = array
+    return file_dicts
+
+    
 
 
-    if center_only == True:
+def averages(file_dicts, steinhardt_settings, zlims = [10, 25]):
+    '''Averages Q values over atoms across timesteps, to be used for references value calculations,
+    not useful for bombardment runs. centre_only = True will only average between a specific z
+    region (dictated by zlims) to avoid edge effects'''
+
+    zlo, zhi = zlims
+    '''
+    atoms_across_frames = [array.shape[0] for array in arrays]
+    all_times = np.zeros([sum(atoms_across_frames), arrays[0].shape[1]])
+
+    low_lim = 0
+    high_lim =  0
+    for index, array in enumerate(arrays): #combining different timestep arrays
+        high_lim += atoms_across_frames[index]
+        all_times[low_lim:high_lim][:] = array
+        low_lim += atoms_across_frames[index]
+
+'''
+    combined_dict = combine_time_steps(file_dicts=file_dicts)
+    all_times = combined_dict['info_array']
+    keys = [int(key)  for key in file_dicts.keys()]
+
+    if steinhardt_settings['reference_gen'] == True:
         z_list = list(all_times[:,0])
         remove_from_average = [index for index, z in enumerate(z_list) if z < zlo or z > zhi]
         all_times = np.delete(all_times, remove_from_average, 0)
 
     avg_str = f'\nValues averaged over {all_times.shape[0]} values calculated from approx. '
-    avg_str += f'{int(all_times.shape[0]/len(arrays))} atoms and {len(arrays)} timesteps, between z values of {zlo} and {zhi}.\n\n'
+    avg_str += f'{int(all_times.shape[0]/len(file_dicts))} atoms and {len(file_dicts)-1} timesteps, between z values of {zlo} and {zhi}.\n\n'
     
     avg_dict = dict()
 
-     
+    for index, degree in enumerate(steinhardt_settings['q_paras']):
 
-    for index in range(1, 6):
-        degree = int(index*2 + 2)
-
-        avg, error = tools.avg(all_times[:,index])
+        avg, error = tools.avg(all_times[:,index+1])
 
         avg_str += f"Q{degree}: {avg} ± {error} "
         avg_str += "\n"    
 
         avg_dict[f"Q{degree}"] = [avg, error]
+
+    avg_str += f'\n\nFinal sampled timestep ({max(keys)}) values: \n\n'
+
+    for index, degree in enumerate(steinhardt_settings['q_paras']):
+
+        avg, error = tools.avg(file_dicts[f'{max(keys)}']['info_array'][:,index+1])
+
+        avg_str += f"Q{degree}: {avg} ± {error} "
+        avg_str += "\n"    
 
        
     return avg_str, avg_dict, all_times
@@ -97,16 +135,17 @@ def reference_values(structure, parameter = None, diamond_avg_dict = None, graph
 
 
 
-def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_dict = None, graphene_avg_dict = None):
+def depth_profile(file_dicts, path, steinhardt_settings, diamond_avg_dict = None, graphene_avg_dict = None, min_avg_val = 20):
 
     bin_size = 3.456
     #degrees = settings_dict["steinhardt_degrees"]
-    degrees = [4,6,8,10,12]
-    titles = ['z'] + [f"Q{int(degree)}" for degree in degrees]
-    
+
+    titles = ['z'] + [f"Q{int(degree)}" for degree in steinhardt_settings['q_paras']]
+    arrays = [file_dict['info_array'] for file_dict in file_dicts.values()]
+    times = [int(key) for key in file_dicts.keys()]
     for column in range(1, arrays[0].shape[1]):
 
-        for array in arrays:
+        for frame_index, array in enumerate(arrays):
 
             zs = list(array[:,0])
             zs.sort()
@@ -126,7 +165,7 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
                 selected_zs = [z for z in zs if z < z_hi_lim and z > z_lo_lim ]
               
 
-                if len(selected_zs) >= 20:
+                if len(selected_zs) >= min_avg_val:
 
                     indexes = [list(array[:,0]).index(z) for z in selected_zs]
 
@@ -139,13 +178,16 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
             
 
 
+
                 z_lo_lim += bin_size
                 z_hi_lim += bin_size
 
             vals = [avg[0] for avg in avgs]
             errs = [avg[1] for avg in avgs]
-            plt.plot(bins, vals)
-            plt.errorbar(bins, vals, yerr = errs)
+
+            plt.errorbar(bins, vals, yerr = errs, label = f'{times[frame_index]}', capsize=5, marker='x')
+
+            print(f"Plotting column {column}, for frame {frame_index}")
             
 
         diamond_ref = reference_values('diamond', titles[column], diamond_avg_dict = diamond_avg_dict)
@@ -155,25 +197,25 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
         sigma = 1
         #plt.axhline(y=diamond_ref[0], color='b', linestyle='-', linewidth = diamond_ref[1]*2*thickness_conv*sigma , alpha = 0.5)
         #plt.axhline(y=graphene_ref[0], color='r', linestyle='-', linewidth = diamond_ref[1]*2*thickness_conv*sigma, alpha = 0.5)
-        plt.axhline(y=diamond_ref[0], color='b', linestyle='-', linewidth = 1 , alpha = 0.5)
-        plt.axhline(y=graphene_ref[0], color='r', linestyle='-', linewidth = 1, alpha = 0.5)
-        plt.text(min(bins), (diamond_ref[0]-0.015), 'Diamond')
-        plt.text(min(bins), (graphene_ref[0]-0.015), 'Graphene')
+        plt.axhline(y=diamond_ref[0], color='b', linestyle='-', linewidth = 1 , alpha = 0.5, label = 'Diamond')
+        plt.axhline(y=graphene_ref[0], color='r', linestyle='-', linewidth = 1, alpha = 0.5, label = 'Graphene')
+
         plt.ylim([-0.1,1])
 
         plt.xlabel("z position / Å")
         plt.ylabel(f"{titles[column]}")
-        plt.legend(times)
-        #plt.title(f"{int(settings_dict['energy'])}eV, {int(settings_dict['no_bombarding_atoms'])} bombardments")
+        
+        plt.legend()
 
         plt.savefig(f"{path}/{titles[column]}.png", dpi=600, bbox_inches = "tight")
         plt.close()
 
-        out = "z, average\n"
-        for index, bin in (bins):
+        out = "z, average, error\n"
+       
+        for index, bin in enumerate(bins):
             out += f"{bin}, {avgs[index][0]}, {avgs[index][1]} \n"
 
-        with open(f"{path}/{titles[column]}.txt", 'w') as fp: 
+        with open(f"{path}/{titles[column]}.csv", 'w') as fp: 
             fp.write(out) 
 
 
@@ -181,16 +223,30 @@ def depth_profile(arrays, path, settings_dict = None, times = None, diamond_avg_
   
   
 
-def histogram(array, path):
+def histogram(file_dicts, path, steinhardt_settings):
+    '''Produces Histograms for values across all timesteps. Takes in all timesteps to allow for animation
+    which currently aren't used. More useful to produce for each timestep. Refernce dictates whether 
+    average occurs over multple timesteps (no bombardment) or single timestep.'''
 
-    degrees = ['Q4','Q6','Q8','Q10','Q12']
-    degrees = [2*n +2 for n in range(1,6)]
-    for index,degree in enumerate(degrees):
-    
-        plt.hist(array[:,int(index+1)], bins = np.arange(0, 1, 0.02))
-        plt.xlabel(f"Q{int(degree)}")
-        plt.savefig(f"{path}/Q{int(degree)}_histogram.png")
-        plt.close()
+
+    if steinhardt_settings['reference_gen'] == True:
+        combined_dict = combine_time_steps(file_dicts=file_dicts)
+        file_dicts = dict(combined = combined_dict)
+
+
+    for file_dict in file_dicts.values():
+        for index, degree in enumerate(steinhardt_settings['q_paras']):
+            diamond_ref = reference_values('diamond', f"Q{degree}", diamond_avg_dict = None)
+            graphene_ref = reference_values('graphene', f"Q{degree}", graphene_avg_dict = None)
+
+            plt.hist(file_dict['info_array'][:,int(index+1)], bins = np.arange(0, 1, 0.02))
+            plt.axvline(x=diamond_ref[0], color='b', linestyle='-', linewidth = 1 , alpha = 0.5, label = 'Diamond')
+            plt.axvline(x=graphene_ref[0], color='r', linestyle='-', linewidth = 1, alpha = 0.5, label = 'Graphene')
+            plt.xlabel(f"Q{int(degree)}")
+            plt.title(f"Timestep: {file_dict['frame_timestep']}")
+            plt.legend()
+            plt.savefig(f"{path}/Q{int(degree)}_{int(file_dict['frame_timestep'])}_histogram.png")
+            plt.close()
 
     time_animation = False
     if time_animation == True:
@@ -230,11 +286,6 @@ def histogram(array, path):
         #writervideo = animation.FFMpegWriter(fps=5) 
         #ani.save(f"{path}/steinhardt_restults/", writer=writervideo)
             
-#Goes through all xyz
-#For selected timestep (start with just one)
-    # Convert to data file
-    # Run simulation to get parameters
-    # Extract parameters ()
 
 
 def main(path, time_animation = False, times_to_plot = []):
