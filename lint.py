@@ -468,7 +468,7 @@ if __name__ == "__main__":
             in_file = file_name
             break
 
-    in_file = 'in.diamond.05ps'
+    #in_file = 'in.diamond.05ps'
     main(path = path, in_file="%s/%s"%(path, in_file), data_file = "%s/data.graphite_sheet"%path,
         reduce_size= False)
 

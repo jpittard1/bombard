@@ -128,17 +128,16 @@ def main(steinhardt_settings_dict):
     for i, file_dict in enumerate(file_dicts.values()):
         file_dict['frame_timestep'] = frames[i].time
 
-    #file_arrs = [file_dict['info_array'] for file_dict in file_dicts.values()]
 
-
-    #column_indexes, q_paras = frames[0].get_columns(steinhardt_settings_dict['q_paras'])
-    
 
     avg_str, avg_dict, full_array = steinhardt.averages(file_dicts, 
                                                         steinhardt_settings=steinhardt_settings_dict)
 
 
-    steinhardt.histogram(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
+    if steinhardt_settings_dict['line_plots'] == True:
+        steinhardt.depth_profile(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
+    if steinhardt_settings_dict['histograms'] == True:
+        steinhardt.histogram(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
 
     array_str = 'z, Q4, Q6, Q8, Q10, Q12\n\n' #read from settings.csv
     for line in full_array:
@@ -152,7 +151,6 @@ def main(steinhardt_settings_dict):
         fp.write(array_str) 
 
 
-    steinhardt.depth_profile(file_dicts, path, steinhardt_settings=steinhardt_settings_dict)
 
 
     tools.mkdir(f"{path}/graphs")
@@ -182,8 +180,9 @@ if __name__ == '__main__':
                                     frames = 4,
                                     timesteps = [],
                                     line_plots = True,
-                                    histograms = False,
+                                    histograms = True,
                                     reference_gen = False,
+                                    z_datapoints = 12,
                                     zlims = [10,25],
                                     q_paras = [4,6,8,10,12])
 

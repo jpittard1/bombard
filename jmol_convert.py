@@ -85,8 +85,8 @@ def main(all_xyz_file_path):
 
         for i in time_step_data:
             line = i.split()
-            if len(line) == 7:
-            #if len(line) == 5: #store in array much faster
+            #if len(line) == 7:
+            if len(line) == 5: #store in array much faster
                 index = int(line[0]) - 1 #so atom 1 is at 0th index
                 atom_type_no = int(line[1])
                 atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
