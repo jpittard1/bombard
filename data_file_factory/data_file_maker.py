@@ -7,8 +7,6 @@ import numpy as np
 from data_file_factory.rotate import Rotate, Shift
 import matplotlib.pyplot as plt
 
-#take inputs for file and trimming dimensions
-
 
 def array_to_datafile(array, file_name = None, path = None):
 
@@ -111,15 +109,16 @@ def trim(array, limits):
 
 
 
-
-
-#zlims = 3.567*7
-
 def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], shift = None, rotate = [0, 0, 0], atom_types = [1,2,3]):
+    '''Not to be confused with tools.xyz_to_array(). This converts xyz file to arrays along
+    side additional changes such as: Limits - atoms outside these limits will be removed from
+    the outputted array. Shift = either "centre" or "origin", the former shifts atoms so they are
+    central about the origin, the latter shifts the atoms so the bottom corner fo the box is on the
+    origin. Rotate (degrees) - angles to be rotated about the x,y,z axis.'''
+
 
     xyz_file = xyz_file.split("\n")
-    print(xyz_file[0])
-    
+
     for index, line in enumerate(xyz_file):
         line = line.split(' ')
         try:
@@ -130,8 +129,20 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
         except ValueError:
             pass
 
-    data_array = np.zeros([int(xyz_file[0]), 4])
-    counter = 0
+    #two types of file used, some have some preamble at the start so this accepts both.
+    try:
+        data_array = np.zeros([int(xyz_file[0]), 4])
+    except ValueError:
+        print("\n\nERROR: Value error occurred, could not do:\n",
+                "data_array = np.zeros([int(xyz_file[0]), 4]).\n",
+                "Instead will try:\n",
+                "data_array = np.zeros([int(xyz_file[3]), 4])\n\n")
+        data_array = np.zeros([int(xyz_file[3]), 4])
+
+
+    #calculating rotation matrix outside of the loop saves a lot of time
+    rotation_mtrx = Rotate.general(rotate) 
+
     for i, line in enumerate(xyz_file[start_line:]):
         line = line.split(' ')
         
@@ -139,23 +150,24 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
             line = [float(item) for item in line]
 
             if line[-4] in atom_types:
-                               
-                rotated_data = Rotate.about_x(np.array(line[-3:]), rotate[0], round_dp = 4)
-        
-                rotated_data = Rotate.about_y(np.array(rotated_data), rotate[1], round_dp = 4)
                 
-                rotated_data = Rotate.about_z(np.array(rotated_data), rotate[2], round_dp = 4)
-                
+                #applying rotation matrix
+                column = np.array(line[-3:]).reshape(3,1)
+                rotated_data = np.dot(rotation_mtrx, column)
+                rotated_data = rotated_data.reshape(1,3)
+                rotated_data = [i for i in rotated_data[0]]
+ 
+                #applying xyz limtis
                 if rotated_data[-1] > limits[-1][0] and rotated_data[-1] < limits[-1][1]: #z
                     if rotated_data[-2] > limits[-2][0] and rotated_data[-2] < limits[-2][1]: #y
                         if rotated_data[-3] > limits[-3][0] and rotated_data[-3] < limits[-3][1]: #x
-                            data_array[i][:] = [line[-4]] + list(rotated_data)
+                            data_array[i][:] = [line[-4]] + rotated_data
                         
-                        
-
         except ValueError:
-            pass
+            print(f"ERROR: Could not float: {line}")
+            
 
+    #findind unfilled elements from list
     to_delete = []
     for i, line in enumerate(data_array):
         try:
@@ -165,17 +177,21 @@ def xyz_to_array(xyz_file, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], sh
         except ValueError:
             pass
 
+    #removing unfilled elements from list
     data_array = np.delete(data_array, to_delete, 0)
 
-    if shift == 'center':
+    #applying xyz translation
+    if shift == 'centre':
         data_array = Shift.centre(data_array, round_dp = 4)
     if shift == 'origin':
         data_array = Shift.origin(data_array, round_dp = 4)
 
+
     return data_array
 
 def remove_h(xyz_file, to_save_path, name):
-    print('here')
+    '''Removes all non carbon atoms from xyz file.'''
+
     data_array = xyz_to_array(xyz_file, atom_types=[1])
     data_file = array_to_datafile(data_array)
     xyz_file = array_to_xyzfile(data_array)
@@ -184,13 +200,17 @@ def remove_h(xyz_file, to_save_path, name):
 
 
 def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], 
-        xyz_file_name = 'rotated_diamond', data_file_name = None):
+        xyz_file_name = 'rotated_diamond', data_file_name = None, shift = 'origin'):
+    '''Opens target xyz file to be converted into datafile. Applies shifts/limits/rotations and 
+    atom removal to the target file before conversion to an data file. Data file is saved as
+    "data_file_name" input.'''
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
+
     xyz_file = open(f"{current_dir}/{xyz_name}", 'r')
     xyz_file = xyz_file.read()
 
-    data_array = xyz_to_array(xyz_file, shift = 'origin', rotate=rotation_deg, limits=limits)
+    data_array = xyz_to_array(xyz_file, shift = shift, rotate=rotation_deg, limits=limits)
 
     data_file = array_to_datafile(data_array)
     xyz_file = array_to_xyzfile(data_array, current_dir)
@@ -206,61 +226,7 @@ def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-100
 
     return data_file_name
   
-    '''
-    xyz_file_name = sys.argv[0]
-    xyz_file_name = 'old_grain/2000.xyz'
-    rotate = [0,90,0]
-    limits = [[-1000,1000], [-1000, 19.9752], [4.05816, 24.969]]
-
-
-    xyz_file_name = sys.argv[0]
-    xyz_file_name = 'grainmin2/10000.xyz'
-    rotate = [0,0,0]
-    limits = [[-1000,1000], [-1000, 1000], [-1000, 1000]]
-
-    data_array = xyz_to_array(xyz_file_name, limits = limits, recentre=False, rotate=rotate)
-    data_array = trim(data_array, [[-5,1000],[1,1000],[-25,1]])
-    data_array = Shift.origin(data_array)
-
-    xs = np.linspace(0, data_array.shape[0], data_array.shape[0])
-
-
-    plt.scatter(data_array[:,1], data_array[:,2])
-    plt.title("xy plane")
-    plt.axis('square')
-    plt.show()
-
-    plt.scatter(data_array[:,1], data_array[:,3])
-    plt.title("xz plane")
-    plt.axis('square')
-    plt.show()
-
-
-    xyz_file_name = sys.argv[0]
-    xyz_file_name = 'LAMMPS_files/minimied/12000.xyz'
-
-    data_array = xyz_to_array(xyz_file_name, recentre=False)
-    data_array = Shift.origin(data_array)
-
-    plt.scatter(data_array[:,1], data_array[:,2])
-    plt.title("xy plane")
-    plt.axis('square')
-    plt.show()
-
-    plt.scatter(data_array[:,1], data_array[:,3])
-    plt.title("xz plane")
-    plt.axis('square')
-    plt.show()
-
-    data_file = array_to_datafile(data_array)
-    xyz_file = array_to_xyzfile(data_array)
-    save_str(xyz_file, current_dir, 'grain', replace = False, xyz = True)
-    '''
-
-
-
-
-
+   
 
 
 

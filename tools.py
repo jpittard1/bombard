@@ -1,6 +1,7 @@
 
 import numpy as np
 import math
+import os
 
 
 
@@ -131,6 +132,10 @@ def time_convert(val, time_to_sec = False, sec_to_time = False, time_of_day = Fa
 
         return f"{hh}:{mm}:{ss}"
 
+
+def bombard_directory():
+    return os.path.dirname(os.path.realpath(__file__))
+
 def time_add(time1_str, time2_str, add = True, subtract = False, time_of_day = False):
     time1 = time_convert(time1_str, time_to_sec=True)
     time2 = time_convert(time2_str, time_to_sec=True)
@@ -141,20 +146,24 @@ def time_add(time1_str, time2_str, add = True, subtract = False, time_of_day = F
     if subtract == True:
         return time_convert(time1-time2, sec_to_time=True, time_of_day=time_of_day)
 
-def xyz_to_array(xyz_file_path):
+def xyz_to_array(xyz_file_path, line_length = 5):
 
     xyz_file = file_proc(f"{xyz_file_path}")
     atoms = int(xyz_file[0])
     atoms_arr = np.zeros([atoms,4])
     indexes = []
 
+    index = -1
     for i in xyz_file:
         line = i.split()
-        if len(line) == 5: #store in array much faster
+        if len(line) == line_length: #store in array much faster
      
-            index = int(line[0]) - 1 #so atom 1 is at 0th index
-            atom_type_no = int(line[1])
-            atoms_arr[index] = np.array([atom_type_no, float(line[2]), float(line[3]), float(line[4])]) 
+            try:
+                index = int(line[-5]) - 1 #so atom 1 is at 0th index
+            except IndexError:
+                index +=1
+            atom_type_no = int(line[-4])
+            atoms_arr[index] = np.array([atom_type_no, float(line[-3]), float(line[-2]), float(line[-1])]) 
             indexes.append(index)
 
     atoms = max(indexes)

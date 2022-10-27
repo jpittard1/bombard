@@ -36,6 +36,7 @@ class Cuboid:
         return str(self.points)
 
     def construct(self):
+        '''Contructs an array representing each corner of the unit cells for the desired replicate.'''
 
         numbers_of_points = int((self.replicate['x']+1)*(self.replicate['y']+1)*(self.replicate['z']+1))
         points = np.zeros([numbers_of_points, 3])
@@ -53,29 +54,65 @@ class Cuboid:
     def rotate(self):
         new_points = np.zeros([self.points.shape[0], 3])
         for i, row in enumerate(self.points):
-            new_points[i] = Rotate.about_z(row, self.rotation_deg['z'], round_dp = 4)
+            newrow = Rotate.about_x(row, self.rotation_deg['x'], round_dp = 4)
+            newrow = Rotate.about_y(newrow, self.rotation_deg['y'], round_dp = 4)
+            new_points[i] = Rotate.about_z(newrow, self.rotation_deg['z'], round_dp = 4)
+
+        setattr(self, 'points', new_points)
+
+    def rotate_gen(self):
+        '''Performs general rotation on points array to represent rotated volume of crystal.'''
+        angles_deg = [item for item in self.rotation_deg.items()]
+        rotation_mtrx = Rotate.general(angles_deg, round_dp = 4)
+        
+        new_points = np.zeros([self.points.shape[0], 3])
+        for i, row in enumerate(self.points):
+            new_points[i] = np.dot(rotation_mtrx, row)
 
         setattr(self, 'points', new_points)
 
 
 
     def dimension_check(self, minimum_length, rotation_axis):
+        '''Calculates distance from the extremeties of rotated points, to
+        the first point where the width of the rotated crystal would allow
+        for the disired replicate to be possible for 1 dimension. '''
 
         theta_rad = self.rotation_deg[rotation_axis]*np.pi/180
         h = minimum_length*np.sin(theta_rad)*np.sin(np.pi/2 - theta_rad)
+       
         return h
+
+    def dimension_check_3D(self, replicate, rotation_axis):
+        '''Not working, cannot work out an effiecent way '''
+        
+        theta_rad = self.rotation_deg[rotation_axis]*np.pi/180
+
+        if rotation_axis == 'z':
+            l_sqrd = (replicate[0]*np.sin(theta_rad)*np.sin(np.pi/2 - theta_rad))**2 + (replicate[0]/2)**2
+            return l_sqrd**0.5
+            
+   
     
-    def valid_region(self, desired_replicate = [3,3,3]):
+    def region_check(self, desired_replicate = [3,3,3], axis = 'z', points_arr = np.array([[None]])):
+        '''Takes max/min of rotated points array and subtracts/adds the distance from extremeties
+        required to allow for the desired replicate. If the desired replicate is too small no points will
+        be within the bounds set by this.'''
 
-        xmax,ymax,zmax = [max(self.points[:,i])  - self.dimension_check(desired_replicate[i]*3.567, 'z') for i in range(0,3)]
-        xmin,ymin,zmin = [min(self.points[:,i])  + self.dimension_check(desired_replicate[i]*3.567, 'z') for i in range(0,3)]
-
+        axes = ['x','y','z']
+        xmax,ymax,zmax = [max(self.points[:,i])  - self.dimension_check(desired_replicate[i]*3.567, rotation_axis=axes[i]) for i in range(0,3)]
+        xmin,ymin,zmin = [min(self.points[:,i])  + self.dimension_check(desired_replicate[i]*3.567, rotation_axis=axes[i]) for i in range(0,3)]
+   
         new_points = []
-        for point in self.points:
+        if points_arr[0][0] == None:
+            points_arr = self.points
+
+        for point in points_arr:
             if point[0] >= xmin and point[0] <= xmax:
                 if point[1] >= ymin and point[1] <= ymax:
                     if point[2] >= zmin and point[2] <= zmax:
                         new_points.append(point)
+                        
 
         if len(new_points) < (desired_replicate[0]+1)*(desired_replicate[1]+1)*(desired_replicate[2]+1):
             setattr(self, 'valid_region', np.array([]))
@@ -90,18 +127,18 @@ class Cuboid:
         return reduced_arr
 
     def get_region(self, desired_replicate = [3,3,3]):
+        '''Reduces rotated points array to size included '''
 
-        valid_region = self.valid_region(desired_replicate = desired_replicate)
-
+        valid_region = self.region_check(desired_replicate = desired_replicate, axis = 'x')
+        
         if valid_region.size == 0:
             return valid_region
-
+     
         center = [max(valid_region[:,i] - min(valid_region[:,i]))/2 + min(valid_region[:,i]) for i in range(0,3)]
 
         xmax,ymax,zmax = [center[i] + desired_replicate[i]*3.567/2 for i in range(0,3)]
         xmin,ymin,zmin = [center[i] - desired_replicate[i]*3.567/2 for i in range(0,3)]
 
-        plt.plot([xmin,xmin,xmax,xmax,xmin], [ymin,ymax,ymax,ymin,ymin])
         lims = [[xmin,xmax],[ymin,ymax],[zmin,zmax]]
         setattr(self, 'lims', lims)
 
@@ -119,16 +156,16 @@ class Cuboid:
         return reduced_arr
         
 def main(desired_replicate, rotation_deg, plot = False):
-
+    plot = False
     test_replicate = [i for i in desired_replicate]
 
-    for i in range(1, 30):
+    for i in range(1, 50):
 
         cube = Cuboid(test_replicate, rotation=rotation_deg)
         cube.rotate()
 
-        final = cube.get_region(desired_replicate)
-        reduced = cube.valid_region
+        final = cube.get_region(desired_replicate) #region to be used (trimmed to size)
+        reduced = cube.valid_region #should be full region that could be used
 
         if final.size != 0:
             if plot != False:
@@ -137,6 +174,22 @@ def main(desired_replicate, rotation_deg, plot = False):
                 plt.scatter(final[:,0], final[:,1])
                 plt.xlabel('x')
                 plt.ylabel('y')
+                plt.axis('square')
+                plt.show()
+
+                plt.scatter(cube.points[:,0], cube.points[:,2])
+                plt.scatter(reduced[:,0], reduced[:,2])
+                plt.scatter(final[:,0], final[:,2])
+                plt.xlabel('x')
+                plt.ylabel('z')
+                plt.axis('square')
+                plt.show()
+
+                plt.scatter(cube.points[:,1], cube.points[:,2])
+                plt.scatter(reduced[:,1], reduced[:,2])
+                plt.scatter(final[:,1], final[:,2])
+                plt.xlabel('y')
+                plt.ylabel('z')
                 plt.axis('square')
                 plt.show()
             

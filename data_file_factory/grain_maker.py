@@ -17,18 +17,18 @@ import tools
 
 
 
+
 def create_xyz(block_size_dict):
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
     in_file = tools.file_proc(f'{current_dir}/LAMMPS_files/in.big_diamond')
-
+   
     for index, line in enumerate(in_file):
         line = line.split(' ')
         if line[0] == 'replicate':
             new_line = ['replicate', int(block_size_dict['x']), int(block_size_dict['y']), int(block_size_dict['z'])]
             new_line = [str(i) for i in new_line]
             sep = ' '
-            print(new_line)
             in_file[index] = sep.join(new_line)
             break
 
@@ -73,10 +73,6 @@ def create_grain(rotated_data_file_name, shift, replicate):
         fp.write(str(in_file)) 
 
     os.system('lmp_serial -in LAMMPS_files/in.create_grain')
-
-    
-
-    
 
 
 
@@ -123,13 +119,13 @@ def minimise_grain(data_file_name):
 def main(desired_final_size, rotation_deg):
 
     desired_replicate = [int(desired_final_size[1]),int(desired_final_size[0]/2), int(desired_final_size[2])]
-    
 
     block_size_dict, limits_list = box_checker.main(desired_replicate, rotation_deg)
-
+   
     create_xyz(block_size_dict)
 
-    data_file_name = dfm.main('0.xyz', desired_replicate, rotation_deg, limits_list, xyz_file_name='rotated_diamond')
+    data_file_name = dfm.main('0.xyz', desired_replicate, rotation_deg, limits_list, 
+                                shift = 'origin', xyz_file_name='rotated_diamond')
 
     shift = abs(limits_list[1][0] - limits_list[1][1])
     create_grain(data_file_name, shift, desired_replicate)
@@ -142,12 +138,14 @@ def main(desired_final_size, rotation_deg):
 
     dir_name = f'{desired_replicate[0]}_{desired_replicate[1]*2}_{desired_replicate[2]}_{int(rotation[2])}'
     
+    os.system(f"rm -r data_files/{dir_name}deg ")
     os.system(f"mkdir xyz_files")
     os.system(f"mv *xyz xyz_files/")
     os.system(f"mkdir {dir_name}deg")
     os.system(f"mv data.* {dir_name}deg")
     os.system(f"mv xyz_files/ {dir_name}deg")
     os.system(f"mv log.lammps {dir_name}deg")
+    os.system(f"mv {dir_name}deg data_files/{dir_name}deg")
     
     
 if __name__ == '__main__':

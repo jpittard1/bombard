@@ -189,7 +189,6 @@ if __name__ == '__main__':
 
     try:
         steinhardt_settings_dict['file'] = sys.argv[1]
-        #steinhardt_settings_dict['file'] = 'grain/d_0g_30eV_1000_4'
     except IndexError:
         print("\nERROR: No Filename Provided.")
         print("\nDefault arguments: ")
