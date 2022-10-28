@@ -4,11 +4,11 @@ import os
 import pprint
 import sys
 import numpy as np
-from data_file_factory.rotate import Rotate, Shift
+from rotate import Rotate, Shift
 import matplotlib.pyplot as plt
 
 
-def array_to_datafile(array, file_name = None, path = None):
+def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0]):
 
     counter = 0
     atom_str = ''
@@ -19,8 +19,11 @@ def array_to_datafile(array, file_name = None, path = None):
     output_str = 'LAMMPS data file from restart file: timestep = 1, procs = 1\n\n'
     output_str += f'{counter} atoms\n\n'
     output_str += '3 atom types\n\n'
-    output_str += f"{min(array[:,1])*1.01:.4f} {max(array[:,1])*1.01:.4f} xlo xhi\n"
-    output_str += f"{min(array[:,2])*1.01:.4f} {max(array[:,2])*1.01:.4f} ylo yhi\n"
+    
+    output_str += f"{min(array[:,1])*1.01:.4f} {extra_xy[0] + max(array[:,1])*1.01:.4f} xlo xhi\n"
+    output_str += f"{min(array[:,2])*1.01:.4f} {extra_xy[1] + max(array[:,2])*1.01:.4f} ylo yhi\n"
+ 
+
     #output_str += f"-5 71.34 zlo zhi\n\n"
 
     zlo = -50
@@ -200,19 +203,21 @@ def remove_h(xyz_file, to_save_path, name):
 
 
 def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], 
-        xyz_file_name = 'rotated_diamond', data_file_name = None, shift = 'origin'):
+        xyz_file_name = 'rotated_diamond', data_file_name = None, shift = 'origin', extra_xy = [0,0]):
     '''Opens target xyz file to be converted into datafile. Applies shifts/limits/rotations and 
     atom removal to the target file before conversion to an data file. Data file is saved as
-    "data_file_name" input.'''
+    "data_file_name" input. Extra_xy creats more space around the crystal (ie +1A).'''
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
     xyz_file = open(f"{current_dir}/{xyz_name}", 'r')
+
     xyz_file = xyz_file.read()
 
     data_array = xyz_to_array(xyz_file, shift = shift, rotate=rotation_deg, limits=limits)
 
-    data_file = array_to_datafile(data_array)
+
+    data_file = array_to_datafile(data_array, extra_xy=extra_xy)
     xyz_file = array_to_xyzfile(data_array, current_dir)
 
     if data_file_name == None:

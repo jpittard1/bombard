@@ -109,8 +109,14 @@ def main(user_input_dict):
     size_str = space.join([str(int(i)) for i in user_inputs_dict['size']])
     nothing = ''
     orientation_str = nothing.join([str(int(i)) for i in user_inputs_dict['orientation']])
-    
+
     dir_name = f"{orientation_str}_{size_str}"
+
+    last_file = gm.minimise_grain(data_file_name)
+
+    data_file_name = dfm.main(last_file, [0,0,0], [0,0,0], xyz_file_name=f'min_{dir_name}', 
+                            data_file_name = f'min_{dir_name}', extra_xy=[0,1])
+
 
     os.system(f"rm -r data_files/{dir_name} ")
     os.system(f"mkdir xyz_files")
