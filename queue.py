@@ -24,8 +24,9 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 results_dir_name = 'results'
 loaded = False
 grain = False
-multi_bombard = True
-energy = 100
+multi_bombard = False
+orient = True
+energy = 10
 test = False
 hpc = True
 temp = 300
@@ -35,17 +36,20 @@ if loaded == True:
     input_file_name = 'in.loaded_multi_bombard'
 if grain == True:
     virtual_replicate = ['8','8','12']
-    input_file_name = 'in.grain_multi_bombard'
+    input_file_name = 'in.final_pc'
+if orient == True:
+    virtual_replicate = ['8','8','6']
+    input_file_name = 'in.final_orient'
 if multi_bombard == True:
     virtual_replicate = None
-    input_file_name = 'in.multi_bombard_para'
+    input_file_name = 'in.final_sc'
 
 pre_bomb_run_val = '3000' #this is changed if test == True, so must be changed here
                             #rather than the input file.
 bomb_run_val = "10000" #this is automatically increase for slow particles and must be
                     #changed here rather than the input file.
 post_bomb_run_val = '100000'
-number_of_particles = '500' #bombarding
+number_of_particles = '4000' #bombarding
 
 if test == True:
     number_of_particles = '5'
@@ -373,6 +377,10 @@ for i in in_file: #goes through the input file line by line both reading and edi
             else:
                 z_lo = i[-2]
                 z_hi = i[-1]
+
+            if i[1] == 'top' and orient == True:
+                z_low = 0
+                z_hi = (int(virtual_replicate[2]) - 1) *3.567
             
             i = seperator.join(i[:3]) + " %s %s %s %s %s %s"%(x_lo, x_hi, y_lo, y_hi, z_lo, z_hi)
 
@@ -440,6 +448,10 @@ while True: #creating new directory
 
         elif grain == True:
             new_path = "%s/%s/%s_grain_%s_%s_%s"%(dir_path, results_dir_name, atom_type, 
+                                            f"{energy}eV", number_of_particles, count)
+        
+        elif orient == True:
+            new_path = "%s/%s/%s_orient_%s_%s_%s"%(dir_path, results_dir_name, atom_type, 
                                             f"{energy}eV", number_of_particles, count)
 
         
