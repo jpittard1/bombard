@@ -37,15 +37,17 @@ def str_to_arr(string):
                 pass
 
 
-
-
     string = string[index:]
     
-    columns = len(string[0].split(' '))
-    arr = np.zeros([len(string), columns])
+    columns = len(string[0].split())
+ 
+    arr = np.ones([len(string), columns])*111
 
    
     if string[0].split(' ')[-2][-1] == ',':
+        commas = True
+
+    if len(string[0].split(',')) >1:
         commas = True
 
     for index, line in enumerate(string):
