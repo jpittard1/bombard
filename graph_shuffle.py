@@ -1,18 +1,13 @@
 
 
 
+from audioop import tostereo
 import os
 import glob
 import pprint
 import tools
 import matplotlib.pyplot as plt
 import sys
-
-
-
-
-
-
 
 
 
@@ -67,7 +62,63 @@ class Combine:
        
 
 
+    def steinhardt(self, to_save_path = None):
+
+        current_dir = tools.bombard_directory()
+        params = [f"Q{para}" for para in range(4,14,2)]
+        to_plot_lists = [[] for i in range(len(self.all_paths)*2)]
+        
+
+        for param in params:
+            for index, path in enumerate(self.all_paths):
+                opened_file = open(f"{dir_path}/results/{path}/steinhardt_results/{param}.csv", 'r')
+
+                string = opened_file.read()
+
+                arr = tools.str_to_arr(string)
             
+                xs = arr[:,0]
+                ys = arr[:,1]
+                y_err = arr[:,2]
+                xs = [x for x in xs if x != 111]
+                ys = [y for y in ys if y != 111]
+
+                plt.plot(xs, ys, label = path.split('/')[-1])
+                
+                to_plot_lists[index*2] = xs
+                to_plot_lists[index*2 + 1] = ys
+
+            plt.legend()
+            plt.xlabel('z / A')
+            plt.ylabel(f'{param}')
+            plt.ylim(-0.1,1.1)
+
+            file_tree = path.split('/')[:-1]
+            sep = '/'
+            file_tree = sep.join(file_tree)
+
+            sep = '/'
+            path_ending = path.split('/')[:-2]
+            path_ending = sep.join(path_ending)
+
+            #to_save_path = f'{dir_path}/results/{file_tree}/{param}'
+
+            plt.savefig(f'{to_save_path}{param}_combined.png', dpi = 300)
+            print(f'{to_save_path}{param}_combined.png')
+            plt.show()
+            plt.close()
+
+
+            column_titles = []
+
+            for name in [path.split('/')[-1] for path in self.all_paths]:
+                column_titles.append(f"{name}_heights")
+                column_titles.append(f"{name}_{param}")
+            self.lists_to_csv(to_plot_lists, f"{to_save_path}{param}_combined.csv", column_titles = column_titles)
+                
+
+
+
           
 
     def depth(self, carbon_initial = False, carbon_final = False, ions = False, to_save_path = None):
@@ -156,11 +207,9 @@ class Combine:
 
             for row in string.split('\n'):
                 row = row.split(', ')
-                if row[0] == 'time':
+                if row[0] == 'steps' or row[0] == 'time':
                     titles = row
                     break
-
-            
       
             arr = tools.str_to_arr(string)
         
@@ -243,8 +292,9 @@ target = 'results/testing/fixes/nvt/damp_100'
 target = 'results/testing/flux'
 
 target = 'results/testing/size/12_12_6'
-target = 'results/final/'
 target = 'results/final/to_compare'
+target = 'results/orient/111/to_compare'
+
 all_paths = []
 for i in range(0,10):
     sep = '/*'*i
@@ -270,16 +320,21 @@ all_paths = [sep.join(path) for path in all_paths]
 
 print(all_paths)
 to_save_path = f"{dir_path}/{target}"
+os.system(f"mkdir {to_save_path}/combined_saturate")
+os.system(f"mkdir {to_save_path}/combined_depth")
+os.system(f"mkdir {to_save_path}/combined_steinhardt")
 combine = Combine(all_paths)
 #
-combine.depth(ions = True, to_save_path=to_save_path)
-combine.depth(carbon_final = True, to_save_path=to_save_path)
 
+combine.steinhardt(to_save_path=f"{to_save_path}/combined_steinhardt/")
+
+combine.depth(ions = True, to_save_path=f"{to_save_path}/combined_depth/")
+combine.depth(carbon_final = True, to_save_path=f"{to_save_path}/combined_depth/")
 print(f"Saved to: {to_save_path}")
-combine.saturate(y= 'ref_yield', to_save_path=to_save_path)
-combine.saturate(y= 'sputt_yield', to_save_path=to_save_path)
-combine.saturate(y= 'd_counter', to_save_path=to_save_path)
-combine.saturate(y= 'c_counter', to_save_path=to_save_path)
-combine.saturate(y= 'surface_height', to_save_path=to_save_path)
+combine.saturate(y= 'ref_yield', to_save_path=f"{to_save_path}/combined_saturate/")
+combine.saturate(y= 'sputt_yield', to_save_path=f"{to_save_path}/combined_saturate/")
+combine.saturate(y= 'd_counter', to_save_path=f"{to_save_path}/combined_saturate/")
+combine.saturate(y= 'c_counter', to_save_path=f"{to_save_path}/combined_saturate/")
+combine.saturate(y= 'surface_height', to_save_path=f"{to_save_path}/combined_saturate/")
 #copy(all_paths, 'saturate_results/sputting_yield')
 
