@@ -4,11 +4,11 @@ import os
 import pprint
 import sys
 import numpy as np
-from rotate import Rotate, Shift
+from data_file_factory.rotate import Rotate, Shift
 import matplotlib.pyplot as plt
 
 
-def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0]):
+def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0], lims = [[None,None],[None,None],[None,None]]):
 
     counter = 0
     atom_str = ''
@@ -20,8 +20,19 @@ def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0]):
     output_str += f'{counter} atoms\n\n'
     output_str += '3 atom types\n\n'
     
-    output_str += f"{min(array[:,1])*1.01:.4f} {extra_xy[0] + max(array[:,1])*1.01:.4f} xlo xhi\n"
-    output_str += f"{min(array[:,2])*1.01:.4f} {extra_xy[1] + max(array[:,2])*1.01:.4f} ylo yhi\n"
+    if lims[0][0] == None:
+        output_str += f"{min(array[:,1])*1.01:.4f} {extra_xy[0] + max(array[:,1])*1.01:.4f} xlo xhi\n"
+    else:
+        output_str += f"{lims[0][0]:.4f} {lims[0][1]:.4f} xlo xhi\n"
+
+    if lims[1][0] == None:
+        output_str += f"{min(array[:,2])*1.01:.4f} {extra_xy[0] + max(array[:,2])*1.01:.4f} ylo yhi\n"
+    else:
+        output_str += f"{lims[1][0]:.4f} {lims[1][1]:.4f} ylo yhi\n"
+
+
+    print(f"x: {min(array[:,1]):.4f} {max(array[:,1]):.4f} ")
+    print(f"y: {min(array[:,2]):.4f} {max(array[:,2]):.4f} ")
  
 
     #output_str += f"-5 71.34 zlo zhi\n\n"
@@ -203,7 +214,8 @@ def remove_h(xyz_file, to_save_path, name):
 
 
 def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-1000,1000],[-1000,1000]], 
-        xyz_file_name = 'rotated_diamond', data_file_name = None, shift = 'origin', extra_xy = [0,0]):
+        xyz_file_name = 'rotated_diamond', data_file_name = None, shift = 'origin', extra_xy = [0,0],
+        box_limits = [[None,None],[None,None],[None,None]]):
     '''Opens target xyz file to be converted into datafile. Applies shifts/limits/rotations and 
     atom removal to the target file before conversion to an data file. Data file is saved as
     "data_file_name" input. Extra_xy creats more space around the crystal (ie +1A).'''
@@ -217,7 +229,7 @@ def main(xyz_name, desired_replicate, rotation_deg, limits = [[-1000,1000],[-100
     data_array = xyz_to_array(xyz_file, shift = shift, rotate=rotation_deg, limits=limits)
 
 
-    data_file = array_to_datafile(data_array, extra_xy=extra_xy)
+    data_file = array_to_datafile(data_array, extra_xy=extra_xy, lims = box_limits)
     xyz_file = array_to_xyzfile(data_array, current_dir)
 
     if data_file_name == None:

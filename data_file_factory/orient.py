@@ -63,7 +63,7 @@ def fit_check(file_name, replicate):
     
     else:
         print(f"{atom_perc}% ({xyz_arr.shape[0]} out of {int(8*replicate[0]*replicate[1]*replicate[2])} atoms) ",
-                "for atoms expected were in the final xyz file.")
+                "for atoms expected were in the final xyz file.\n\n")
      
 
 
@@ -113,10 +113,12 @@ def main(user_input_dict):
     dir_name = f"{orientation_str}_{size_str}"
 
     last_file = gm.minimise_grain(data_file_name)
-
+    
     data_file_name = dfm.main(last_file, [0,0,0], [0,0,0], xyz_file_name=f'min_{dir_name}', 
-                            data_file_name = f'min_{dir_name}', extra_xy=[0,1])
-
+                            data_file_name = f'min_{dir_name}', extra_xy=[0,1],
+                            box_limits = [[0,3.567*8],[0,3.567*8],[None,None]])
+    
+    fit_check(f'min_{dir_name}_1.xyz', user_input_dict['size'])
 
     os.system(f"rm -r data_files/{dir_name} ")
     os.system(f"mkdir xyz_files")
