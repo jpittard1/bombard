@@ -1,6 +1,5 @@
 
-from ast import Index
-from calendar import c
+
 import subprocess
 import os
 import tools
@@ -129,10 +128,59 @@ class Track:
 
 
 
+def all_jobs_progress():
 
+     job_ids, times = Track.get_ids(self = False, time = True)
+
+     for id in job_ids:
+          get_info(id, only_progress = True)
+
+
+
+
+def recent_jobs():
+     
+     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
+     jobs.remove('')
+     print(f"Last Completed Jobs:")
+     completed_jobs = []
+     job_ids, times = Track.get_ids(self = False, time = True)
+
+
+     for job in jobs:
+
+          job_lines = job.split('\n')
+          job_lines.remove('')
+
+          date_time = job_lines[1]
+          id = job_lines[2].split(' ')[-1]
+          file_name = job.split('\n')[4][11:]
+
+          if int(id) in job_ids:
+               print(f'Still running: {file_name} ({id}) - {date_time} ')
+
+          else:
+               print(f'{file_name} ({id}) - {date_time} ')
+               completed_jobs.append([id, file_name]) 
+               
+
+          if len(completed_jobs) == 10:
+               break
+     
+     print('\nCompleted Job Ids:')
+     print(str([int(job[0]) for job in completed_jobs])[1:-1])
+
+     print('\nCompleted Job Names:')
+     for i, job in enumerate(completed_jobs):
+          if completed_jobs.index(job) == int(len(completed_jobs)-1):
+               print(job[1], end = '\n\n')
+          else:
+               print(job[1], end = ', ')
+
+
+     
 
 def check_progress(file_name, id):
-
      
      job_ids, times = Track.get_ids(self = False, time = True)
 
@@ -168,7 +216,7 @@ def check_progress(file_name, id):
 
 
 
-def get_info(job_id):
+def get_info(job_id, only_progress = False):
 
      success = False
      jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40) 
@@ -213,23 +261,37 @@ def get_info(job_id):
 
 
                
-                         print("\n\n")
-                         print(f"On {current_ion} out of {total_ion} ({ion_perc:.3g}%)")
-                         print(f'Running for {current_time} out of {total_time} ({time_perc:.3g}%)')
-                         
-                         bars = int(current_ion*50/total_ion)
-                         print('Ions: |','#'*bars,"_"*(50-bars),'|')
+                         if only_progress == True:
+                              print('\n')
+                              print(f"{id} - {file_name}")
+                              print(f"On {current_ion} out of {total_ion} ({ion_perc:.3g}%)")
+                              print(f'Time: {current_time}/{total_time} ({time_perc:.3g}%), Ions: {current_ion}/{total_ion} ({ion_perc:.3g}%)')
+                              bars = int(current_ion*50/total_ion)
+                              print('Ions: |','#'*bars,"_"*(50-bars),'|')
+                              print(f'Estimated finish time: {finish_time}')
 
-                         bars = int(time_perc/2)
-                         print('Time: |','#'*bars,"_"*(50-bars),'|')
-                         print(f'Estimated total time: {estimated_total_time}')
-                         print(f'Estimated time remaining: {time_remaining}')
-                         print(f'Estimated finish time: {finish_time}')
+
+                         else:
+                              print('\n')
+                              print(f"On {current_ion} out of {total_ion} ({ion_perc:.3g}%)")
+                              print(f'Running for {current_time} out of {total_time} ({time_perc:.3g}%)')
+                              
+                              bars = int(current_ion*50/total_ion)
+                              print('Ions: |','#'*bars,"_"*(50-bars),'|')
+
+                              
+                              bars = int(time_perc/2)
+                              print('Time: |','#'*bars,"_"*(50-bars),'|')
+
+                              print(f'Estimated total time: {estimated_total_time}')
+                              print(f'Estimated time remaining: {time_remaining}')
+                              print(f'Estimated finish time: {finish_time}')
 
 
               
+                    if only_progress == False:
+                         print(job)
 
-                    print(job)
                     success = True
                     break
           except IndexError:
@@ -237,6 +299,7 @@ def get_info(job_id):
      
      if success == False:
           print(f"\nERROR: Could not find {job_id} in current_jobs.txt.\n")
+
 
 
 def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
@@ -298,24 +361,30 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
    
 if __name__ == "__main__":
 
+     if len(sys.argv) == 1:
+          all_jobs_progress()
 
-     if sys.argv[1] == "-help":
-          print("\n\nTo get job info, give job ID as arguemnt.")
-          print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
+     else:
+          if sys.argv[1] == "-help":
+               print("\n\nTo get job info, give job ID as arguemnt.")
+               print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
 
-     if sys.argv[1] == '-multi':
-          if sys.argv[2] == '-last_jobs':
-               run_multi_analysis(last_jobs=int(sys.argv[3]))
+          if sys.argv[1] == "-recent":
+               recent_jobs()
 
-          if sys.argv[2] == '-ids':
-               run_multi_analysis(job_ids = sys.argv[3:])
-   
-          if sys.argv[2] == '-names':
-               run_multi_analysis(file_names = sys.argv[3:])
+          if sys.argv[1] == '-multi':
+               if sys.argv[2] == '-last_jobs':
+                    run_multi_analysis(last_jobs=int(sys.argv[3]))
 
-     elif sys.argv[1] != '-help' and sys.argv[1] != 'multi':
-          job_id = sys.argv[1]
-          get_info(job_id)
+               if sys.argv[2] == '-ids':
+                    run_multi_analysis(job_ids = sys.argv[3:])
+
+               if sys.argv[2] == '-names':
+                    run_multi_analysis(file_names = sys.argv[3:])
+
+          elif sys.argv[1] != '-help' and sys.argv[1] != 'multi' and sys.argv[1] != '-recent':
+               job_id = sys.argv[1]
+               get_info(job_id)
 
 
           
