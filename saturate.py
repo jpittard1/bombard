@@ -11,7 +11,6 @@
     # Would be better to get all of the files read in lint and then fed into each of them? although couldnt run individually, maybe just a tools function
 
 
-import re
 import sys
 import os.path
 import pandas as pd
@@ -25,6 +24,7 @@ from surface import Surface_finder
 
 
 def bombard_attempts_calc(settings_dict, time, final = False):
+    #Flawed with new timing issues?
     
     bombarding_time = time - settings_dict['pre_bombard_time']
 
@@ -44,6 +44,34 @@ def bombard_attempts_calc(settings_dict, time, final = False):
 
     else:
         return 0 
+
+def read_log(path):
+    '''Reads log file instead of relying on an equal number of timesteps between
+    bombardments - not always the case with a variable timestep. Out puts a dictionary
+    where keys correspond to each timestep, items are another dict of actual time and
+    number of attemped bombards'''
+
+    atoms = tools.file_proc(f"{path}/log.lammps", seperator= 'Created 1 atoms')
+    #Splits when each D/T atoms is created.
+
+    bombard_attempts_dict = dict()
+
+    for atom_no, atom in enumerate(atoms):
+        #Splits to easily access thermo data
+        timechecks = atom.split("Step Time")
+        lines = timechecks[-1].split('\n')
+        first_dump_line = lines[1].split()
+
+        bombard_attempts_dict[first_dump_line[0]] = dict(time = first_dump_line[1],
+                                                        attempts = atom_no)
+  
+    keys = [key for key in bombard_attempts_dict.keys()]
+  
+    print(f"First: {bombard_attempts_dict[keys[0]]}")
+    print(f"Second: {bombard_attempts_dict[keys[1]]}")
+    print(f"Last: {bombard_attempts_dict[keys[-1]]}")
+
+    return bombard_attempts_dict
 
 
 
@@ -71,7 +99,7 @@ def main(path):
 
     jmol_all_xyz = jmol_all_xyz.split("\n\n")
 
-    results_arr = np.zeros([len(jmol_all_xyz) - 1, 8])
+    results_arr = np.zeros([len(jmol_all_xyz) - 1, 9])
 
     final = False
 
@@ -121,6 +149,8 @@ def main(path):
     print("\n\nPROGRESS: Counting atoms.") 
     surfaces = []
 
+    bombard_attempts_dict = read_log(f"{settings_path}")
+
     for i1, frame in enumerate(jmol_all_xyz):
         
         if i1 == len(jmol_all_xyz) - 1:
@@ -129,10 +159,10 @@ def main(path):
         try:
             frame = frame.split('\n')
      
-            time = frame[1].split(' ')[-1]
-            time = float(time)
+            step = frame[1].split(' ')[-1]
+            step = float(step)
         
-            bombard_attempts = bombard_attempts_calc(settings_dict,time, final = final)
+            #bombard_attempts = bombard_attempts_calc(settings_dict,step, final = final)
 
         except IndexError:#required to deal with: ''
             break
@@ -157,9 +187,17 @@ def main(path):
         #        t_counter += 1
 
         #carbon_zs = [float(frame[i2].split()[-1]) for i2 in range(0,len(frame)) ]
+        available_steps = [int(key) for key in bombard_attempts_dict.keys()]
+        target_step = tools.closest_to(int(step), available_steps)
+        bombard_attempts = bombard_attempts_dict[str(int(target_step))]['attempts']
+        time = bombard_attempts_dict[str(int(target_step))]['time']
+
         carbon_zs = [float(line.split()[-1]) for line in frame if line.split()[0] == '1']
         d_zs = [float(line.split()[-1]) for line in frame if line.split()[0] == '2']
         t_zs = [float(line.split()[-1]) for line in frame if line.split()[0] == '3']
+
+        if bombard_attempts < (len(d_zs) + len(t_zs)):
+            raise ValueError("Error in counting, more counted D/T than attempted implants.")
 
 
         surface_finder = Surface_finder(carbon_zs, surface_area_unit_cells=surface_unit_cells, surface_area=surface_area)
@@ -192,7 +230,7 @@ def main(path):
             ref_yield = 1
 
 
-        results_arr[i1] = np.array([time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield, surface_finder.surface])
+        results_arr[i1] = np.array([step, time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield, surface_finder.surface])
   
 
     try:
@@ -204,7 +242,7 @@ def main(path):
 
     results_str = f'Saturate results for {path.split("/")[-2]}\n\n'
     results_str += f'Surface limit taken to be at height of {surface_finder.surface}±{surface_finder.surface_err}A.\n\n'
-    results_str += 'time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield, surface_height\n' 
+    results_str += 'steps, time, bombard_attempts, d_counter, t_counter, c_counter, sputt_yield, ref_yield, surface_height\n' 
     comma = ', '
     for row in results_arr:
         row_list = [str(i) for i in row]
@@ -216,8 +254,9 @@ def main(path):
         fp.write(str(results_str))
 
 
-    times = results_arr[:,0].flatten()
-    attempts = results_arr[:,1].flatten()
+    steps = results_arr[:,0].flatten()
+    times = results_arr[:,1].flatten()
+    attempts = results_arr[:,2].flatten()
 
     try:
         fluence = [i/float(settings_dict['surface_area']) for i in attempts]
@@ -226,27 +265,57 @@ def main(path):
         fluence = attempts
         x_title = "Incident ions"
 
-    deuterium = results_arr[:,2].flatten()
-    tritium = results_arr[:,3].flatten()
-    carbon = results_arr[:,4].flatten()
-    sputt = results_arr[:,5].flatten()
-    reflect = results_arr[:,6].flatten()
-    surface = results_arr[:,7].flatten()
+    
+    deuterium = results_arr[:,3].flatten()
+    tritium = results_arr[:,4].flatten()
+    carbon = results_arr[:,5].flatten()
+    sputt = results_arr[:,6].flatten()
+    reflect = results_arr[:,7].flatten()
+    surface = results_arr[:,8].flatten()
 
-    plt.plot(fluence, deuterium)
-    plt.plot(fluence, tritium)
-    plt.plot(fluence, carbon)
-    plt.legend(["Deuterium", "Tritium"])
-    plt.ylabel("Particles")
-    plt.xlabel(x_title)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twiny()
+
+    ax1.plot(fluence, deuterium, label = 'Deuterium')
+    ax1.plot(fluence, tritium, label = 'Tritium')
+    ax1.plot(fluence, carbon, label = 'Carbon')
+    ax1.legend()
+    ax1.set_ylabel("Particles")
+    ax1.set_xlabel(x_title)
+
+    ticks = np.linspace(min(fluence), max(fluence), 6)
+
+    def tick_function(ticks):
+        return [str(int(tick*float(settings_dict['surface_area']))) for tick in ticks]
+            
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_xticks(ticks)
+    ax2.set_xticklabels(tick_function(ticks))
+    ax2.set_xlabel(f"Bombard Attempts")
+
+
     plt.savefig("%s/saturate_02_results/attempts.png"%settings_path)
     plt.close()
 
-    plt.plot(fluence, sputt)
-    plt.plot(fluence, reflect)
-    plt.legend(["Sputtering", "Reflection"])
-    plt.ylabel("Yield")
-    plt.xlabel(x_title)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twiny()
+
+    ax1.plot(fluence, sputt)
+    ax1.plot(fluence, reflect)
+    ax1.legend(["Sputtering", "Reflection"])
+    ax1.set_ylabel("Yield")
+    ax1.set_xlabel(x_title)
+
+    ticks = np.linspace(min(fluence), max(fluence), 6)
+
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_xticks(ticks)
+    ax2.set_xticklabels(tick_function(ticks))
+    ax2.set_xlabel(f"Bombard Attempts")
+
+
     plt.savefig("%s/saturate_02_results/sputtering_yield.png"%settings_path, dpi = 300)
     plt.close()
 
@@ -294,3 +363,5 @@ if __name__ == "__main__":
         print("\nFile path used: %s"%path)
         print("\n")
         print("-"*60)
+
+    read_log(f"{current_dir}/results/{dir_name}")
