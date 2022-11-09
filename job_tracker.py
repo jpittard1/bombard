@@ -136,6 +136,38 @@ def all_jobs_progress():
           get_info(id, only_progress = True)
 
 
+def analysis_check(file_name):
+
+     bombard_dir = tools.bombard_directory()
+     file_exists = False
+     failed = False
+     analysis_performed = False
+     cleanup_performed = True
+
+     try:
+          open(f"{bombard_dir}/results/{file_name}/OUT")
+          file_exists = True
+
+          open(f"{bombard_dir}/results/{file_name}/jmol_all.xyz")
+          analysis_performed = True
+
+          open(f"{bombard_dir}/results/{file_name}/xyz_files/0.xyz")
+          cleanup_performed = False
+
+     except FileNotFoundError:
+          if analysis_performed == False:
+               try:
+                    open(f"{bombard_dir}/results/{file_name}/0.xyz")
+               except FileNotFoundError:
+                    failed = True
+
+
+     return file_exists, failed, analysis_performed, cleanup_performed
+          
+
+
+
+
 
 
 def recent_jobs():
@@ -147,6 +179,22 @@ def recent_jobs():
      job_ids, times = Track.get_ids(self = False, time = True)
 
 
+     id_lists_dict = dict(no_dirs = [],
+                         queue = [],
+                         running = [],
+                         failed_sims = [],
+                         needs_analysis = [],
+                         needs_cleaning = [],
+                         complete = [])
+
+     file_name_lists_dict = dict(no_dirs = [],
+                         queue = [],
+                         running = [],
+                         failed_sims = [],
+                         needs_analysis = [],
+                         needs_cleaning = [],
+                         complete = [])
+
      for job in jobs:
 
           job_lines = job.split('\n')
@@ -156,26 +204,83 @@ def recent_jobs():
           id = job_lines[2].split(' ')[-1]
           file_name = job.split('\n')[4][11:]
 
-          if int(id) in job_ids:
-               print(f'Still running: {file_name} ({id}) - {date_time} ')
+          file_found, failed, analysis_performed, cleanup_performed = analysis_check(file_name)
 
-          else:
-               print(f'{file_name} ({id}) - {date_time} ')
-               completed_jobs.append([id, file_name]) 
+
+          if file_found == False:
+               if int(id) in job_ids:
+                    status = 'In the queue.'
+                    id_lists_dict['queue'].append(id)
+                    file_name_lists_dict['queue'].append(file_name)
+
+               else:
+                    status = 'Directory not found.'
+                    id_lists_dict['no_dirs'].append(id)
+                    file_name_lists_dict['no_dirs'].append(file_name)
+
+          elif failed == True:
+               status = 'Simulation Failed.'
+               id_lists_dict['failed_sims'].append(id)
+               file_name_lists_dict['failed_sims'].append(file_name)
+
+          elif analysis_performed == False:
+               if int(id) in job_ids:
+                    status = 'Running.'
+                    id_lists_dict['running'].append(id)
+                    file_name_lists_dict['running'].append(file_name)
+
+               else:
+                    status = 'Needs analysis.'
+                    id_lists_dict['needs_analysis'].append(id)
+                    file_name_lists_dict['needs_analysis'].append(file_name)
+
+          elif cleanup_performed == False:
+               status = 'Analysis complete, needs cleaning.'
+               id_lists_dict['needs_cleaning'].append(id)
+               file_name_lists_dict['needs_cleaning'].append(file_name)
+
+          elif cleanup_performed == True:
+               status = 'Analysis and clean up complete.'
+               id_lists_dict['complete'].append(id)
+               file_name_lists_dict['complete'].append(file_name)
+
+      
+          print(f'{file_name} ({id}) - {date_time}, {status} ')
                
 
           if len(completed_jobs) == 10:
                break
      
-     print('\nCompleted Job Ids:')
-     print(str([int(job[0]) for job in completed_jobs])[1:-1])
+  
+     sep = ' '
 
-     print('\nCompleted Job Names:')
-     for i, job in enumerate(completed_jobs):
-          if completed_jobs.index(job) == int(len(completed_jobs)-1):
-               print(job[1], end = '\n\n')
-          else:
-               print(job[1], end = ', ')
+     print("\nIn queue:")
+     print(f"{sep.join(id_lists_dict['queue'])}")
+     print(f"{sep.join(file_name_lists_dict['queue'])}")
+
+     print("\nRunning:")
+     print(f"{sep.join(id_lists_dict['running'])}")
+     print(f"{sep.join(file_name_lists_dict['running'])}")
+     
+     print("\nNot found:")
+     print(f"{sep.join(id_lists_dict['no_dirs'])}")
+     print(f"{sep.join(file_name_lists_dict['no_dirs'])}")
+
+     print("\nFailed:")
+     print(f"{sep.join(id_lists_dict['failed_sims'])}")
+     print(f"{sep.join(file_name_lists_dict['failed_sims'])}")
+
+     print("\nNeeds analysis:")
+     print(f"{sep.join(id_lists_dict['needs_analysis'])}")
+     print(f"{sep.join(file_name_lists_dict['needs_analysis'])}")
+
+     print("\nNeeds cleaning:")
+     print(f"{sep.join(id_lists_dict['needs_cleaning'])}")
+     print(f"{sep.join(file_name_lists_dict['needs_cleaning'])}")
+
+     print("\nComplete and clean:")
+     print(f"{sep.join(id_lists_dict['complete'])}")
+     print(f"{sep.join(file_name_lists_dict['complete'])}\n\n")
 
 
      
