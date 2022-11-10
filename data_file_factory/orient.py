@@ -4,7 +4,7 @@ import sys
 import os
 import pprint
 import math
-from traceback import print_tb
+import glob
 import numpy as np
 from rotate import Rotate
 import box_checker as bc
@@ -58,17 +58,84 @@ def fit_check(file_name, replicate):
     zero_lines = [1 for line in xyz_arr if line[1] == 0 and line[2] == 2 and line[3] == 0 or line[0] == 0]
     print(f"\n\n{len(zero_lines)} zero lines found.")
     if atom_perc < 90:
-        print(f"WARNING: Only {atom_perc}% of expected atoms where found.")
+        print(f"WARNING: Only {atom_perc:.3g}% of expected atoms where found.")
         print(f"The 'big_block_replicate' may be too small.")
     
     else:
-        print(f"{atom_perc}% ({xyz_arr.shape[0]} out of {int(8*replicate[0]*replicate[1]*replicate[2])} atoms) ",
+        print(f"{atom_perc:.3g}% ({xyz_arr.shape[0]} out of {int(8*replicate[0]*replicate[1]*replicate[2])} atoms) ",
                 "for atoms expected were in the final xyz file.\n\n")
      
 
 
     
-   
+def lammps_trim(data_file_name):
+    """Performs a short lammps simulation with final BCs in all dimensions, this is 
+    to remove excess atoms as a result of imperfect limts/rotations."""
+    
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    in_file = tools.file_proc(f'{current_dir}/LAMMPS_files/in.trim')
+
+    for index, line in enumerate(in_file):
+        line = line.split(' ')
+
+        if line[0] == 'read_data':
+            path = f'{current_dir}/data.{data_file_name}_1'
+            line[1] = path
+            sep = ' '
+            in_file[index] = sep.join(line)
+            break
+ 
+    sep = '\n'
+    in_file = sep.join(in_file)
+
+    with open(f'{current_dir}/LAMMPS_files/in.trim', 'w') as fp: #rewriting edited input file
+        fp.write(str(in_file)) 
+
+    os.system('lmp_serial -in LAMMPS_files/in.trim')
+
+    full_path = glob.glob(f'{current_dir}/*.xyz')
+
+    xyz_files = [path.split('/')[-1] for path in full_path]
+    xyz_files.sort()
+
+    for file in xyz_files:
+        try:
+            last_file = f"{int(file[:-4])}.xyz"
+        except ValueError:
+            break
+
+    return last_file
+
+
+def atom_number_finder(target_atoms):
+    '''Used to deal with variabilities with atoms after rotations. After the inititial rotation and trim, a run 
+    is done with final BCs (using lammps_trim()), number of atoms gradually decreases during this time. This function
+    checks the number of atoms in each xyz file outputting during lammps_trim(), then finds the xyz file closest to
+    the desired number of atoms. If multiple files are closest, the last file is taken. Returns name of xyz file
+    to be taken forward to next step in data file creation.'''
+
+
+    bombard_dir = tools.bombard_directory()
+    xyz_file_paths = glob.glob(f"{bombard_dir}/data_file_factory/*0.xyz")
+
+    number_of_atoms_dict = dict()
+    for xyz_file_path in xyz_file_paths:
+
+        xyz_file = tools.file_proc(xyz_file_path)
+
+        timestep = xyz_file_path.split('/')[-1][:-4]
+
+        number_of_atoms_dict[timestep] = int(xyz_file[3])
+
+    pprint.pprint(number_of_atoms_dict)
+
+    atom_numbers = [val for val in number_of_atoms_dict.values()]
+    closest_to = tools.closest_to(target_atoms,atom_numbers)
+
+    valid_timesteps = [int(timestep) for timestep in number_of_atoms_dict.keys() if number_of_atoms_dict[timestep] == closest_to]
+
+    print(f'\nUsing {max(valid_timesteps)}.xyz')
+    return f"{max(valid_timesteps)}.xyz"
 
 
 
@@ -94,28 +161,43 @@ def main(user_input_dict):
     xmin, ymin, zmin = [-user_input_dict['size'][i]*3.567/2 for i in range(3)]
     xmax, ymax, zmax = [user_input_dict['size'][i]*3.567/2 for i in range(3)]
 
-    limits = [[xmin,xmax],[ymin,ymax],[zmin,zmax]]
+    extra = 0
+    limits = [[xmin + extra,xmax - extra],[ymin + extra ,ymax-extra],[zmin,zmax]]
     
 
     #Trimming down to the desired size.
     data_file_name = dfm.main('big_rotated_1.xyz', user_input_dict['size'], rotation_deg = [0,0,0], 
-                            limits=limits, shift='origin', xyz_file_name='trimmed_rotated')
-
-
-    #checking number of atoms in final xyz_file
-    fit_check('trimmed_rotated_1.xyz', user_input_dict['size'])
+                            limits=limits, shift='origin', xyz_file_name='trimmed_rotated',
+                            box_limits = [[0,3.567*8],[0,3.567*8],[None,None]])
 
     space = '-'
     size_str = space.join([str(int(i)) for i in user_inputs_dict['size']])
     nothing = ''
     orientation_str = nothing.join([str(int(i)) for i in user_inputs_dict['orientation']])
-
     dir_name = f"{orientation_str}_{size_str}"
+
+    last_file = lammps_trim(data_file_name)
+
+    target_no_atoms = np.prod(user_input_dict['size'])*8
+    target_xyz = atom_number_finder(target_no_atoms)
+
+
+    data_file_name = dfm.main(target_xyz, [0,0,0], [0,0,0], xyz_file_name=f'final_trim_{dir_name}', 
+                            data_file_name = f'final_trim_{dir_name}', extra_xy=[0,0],
+                            box_limits = [[0,3.567*8],[0,3.567*8],[None,None]])
+
+    bombard_dir = tools.bombard_directory()
+    os.system(f"rm -r {bombard_dir}/data_file_factory/*0.xyz")
+
+    #checking number of atoms in final xyz_file
+    fit_check('trimmed_rotated_1.xyz', user_input_dict['size'])
+
+
 
     last_file = gm.minimise_grain(data_file_name)
     
     data_file_name = dfm.main(last_file, [0,0,0], [0,0,0], xyz_file_name=f'min_{dir_name}', 
-                            data_file_name = f'min_{dir_name}', extra_xy=[0,1],
+                            data_file_name = f'min_{dir_name}', extra_xy=[0,0],
                             box_limits = [[0,3.567*8],[0,3.567*8],[None,None]])
     
     fit_check(f'min_{dir_name}_1.xyz', user_input_dict['size'])
