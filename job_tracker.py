@@ -367,14 +367,13 @@ def get_info(job_id, only_progress = False):
 
                
                          if only_progress == True:
-                              print('\n')
-                              print(f"{id} - {file_name}")
-                              print(f"On {current_ion} out of {total_ion} ({ion_perc:.3g}%)")
+                     
+                              print(f"\n{id} - {file_name}")
                               print(f'Time: {current_time}/{total_time} ({time_perc:.3g}%), Ions: {current_ion}/{total_ion} ({ion_perc:.3g}%)')
                               bars = int(current_ion*50/total_ion)
                               print('Ions: |','#'*bars,"_"*(50-bars),'|')
-                              print(f'Estimated finish time: {finish_time}')
-
+                              print(f'Estimated finish time: {finish_time}\n')
+             
 
                          else:
                               print('\n')
