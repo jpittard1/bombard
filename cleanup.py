@@ -6,6 +6,7 @@ import os
 import sys
 import tools
 import shutil
+import glob
 
 def main(paths):
 
@@ -18,7 +19,7 @@ def main(paths):
 
     print("\n\n")
     print("-"*60)
-    print("\nNOTE: This will delete the xyz_files dir and all other .xyz and .para files except "
+    print("\nNOTE: This will delete the xyz_files dir, dsp_files dir and all other .xyz and .para files except "
                     "all.xyz and jmol_all.xyz in:")
     print(paths_str)
     cont_yn = tools.input_misc("\nDo you wish to continue (y/n): ", ['y','n'])
@@ -39,6 +40,15 @@ def main(paths):
                 print("\nFile path used: %s"%path)
                 print("\n")
                 
+            try:
+                shutil.rmtree("%s/dsp_files"%path) 
+            except FileNotFoundError:
+                print("\n\n")
+                print("-"*60)
+                print("\nERROR: This file is already clean or does not exist.")
+                print("\nFile path used: %s"%path)
+                print("\n")
+                
 
             try:
                 shutil.rmtree("%s/steinhardt_files"%path) 
@@ -47,16 +57,20 @@ def main(paths):
     
 
 
-
-
-
-
+ 
 if __name__ == "__main__":
-   
-    current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    dir_names = sys.argv[1:]
+    bombard_dir = tools.bombard_directory()
+    accepted_args = ['repeats', 'path', 'multi_file']
 
-    paths = [current_dir + '/results/' +  dir_name for dir_name in dir_names]
 
-    main(paths)
+    args_dict = tools.args_to_dict(sys.argv[1:], accecpted_args=accepted_args)   
+
+    if tools.str_to_bool(args_dict['repeats']):
+        paths = glob.glob(f"{bombard_dir}/{args_dict['path']}/*r")
+
+    elif args_dict['multi_file']:
+        pass
+
+
+    main(paths=paths)
