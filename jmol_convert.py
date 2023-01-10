@@ -1,5 +1,4 @@
 
-from collections import namedtuple
 import sys
 import os
 import numpy as np
@@ -45,10 +44,7 @@ def main(all_xyz_file_path):
 
     print("\n\nPROGRESS: Running jmol_convert.py") 
 
-    try:
-        split = sys.argv[2]
-    except IndexError:
-        split = 100
+    split = 100
 
     print("%s/settings.csv"%all_xyz_file_path[:-8])
     settings_dict = csv_reader("%s/settings.csv"%all_xyz_file_path[:-8])
