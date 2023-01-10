@@ -1,7 +1,7 @@
 
 
 
-##### New version of depth, now using surface.py ######
+
 
 from surface import Surface_finder
 import tools
@@ -9,274 +9,232 @@ import numpy as np
 import os
 import sys
 import matplotlib.pylab as plt
+import glob
 
 
+'''
+Requirements and Considations
+    - Single Atom Bombards
+        - Average final depth
+        - Average max depth
+        - Histograms of depths
+        - Path?
+    - Multibombard
+        - Depth profiles can be given by surface analysis
+        - Text file of densities
+        - Text file of Average values, penetration depths etc
+
+'''
 
 
+class Depth:
 
+    def __init__(self, path, repeats = False):
 
-def main(path):
-    '''
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    settings_path = f"{current_dir}/results/testing/size/[12,12,6]/t_0g_30eV_4000_1"
-    '''
+        
+        self.surface_finding_method = 'cut_off'
+        self.surface_cut_off = -2
+        self.ion_cut_off = 2
 
-    try:
-        os.mkdir("%s/depth_results/"%path)
-    except FileExistsError:
-        pass
+        self.path = path
+        self.repeats = tools.str_to_bool(repeats)
 
-    surface_finding_method = 'cut_off'
-    surface_cut_off = -2
-    ion_cut_off = 2
-
-
-    initial = tools.file_proc(f"{path}/initial_indexed.xyz")
-    initial_arr = tools.xyz_to_array(f"{path}/initial_indexed.xyz")
-    final_arr = tools.xyz_to_array(f"{path}/final_indexed.xyz")
-
-    settings_dict = tools.csv_reader("%s/settings.csv"%path)
-
-    loaded = False
-    try: #allows code to be used for olded simulations when loaded wasnt in settings
-        if settings_dict['loaded'] == "True":
-            loaded = True
-    except KeyError:
-        pass
-
-    ########################### Fetching indexes from inital xyz ######################    
-    
-
-    ########################### Finding heights of diamond and layers ######################
-
-    print("\n\nPROGRESS: Determining heights of surfaces.") 
-
-   
-    initial_carbon_zs = [row[-1] for row in initial_arr if row[-4] == 1]
-    initial_carbon_xs = [row[-3] for row in initial_arr if row[-4] == 1]
-    initial_carbon_ys = [row[-2] for row in initial_arr if row[-4] == 1]
-    final_carbon_zs = [row[-1] for row in final_arr if row[-4] == 1]
-    final_carbon_xs = [row[-2] for row in final_arr if row[-4] == 1]
-    final_dueterium_zs = [row[-1] for row in final_arr if row[-4] == 2]
-    final_dueterium_xs = [row[-2] for row in final_arr if row[-4] == 2]
-    final_tritium_zs = [row[-1] for row in final_arr if row[-4] == 3]
-    final_tritium_xs = [row[-2] for row in final_arr if row[-4] == 3]
-
-    
-    plt.scatter(final_carbon_xs, final_carbon_zs)
-    plt.scatter(final_dueterium_xs, final_dueterium_zs)
-    plt.ylim(20,-20)
-    plt.savefig(f'{path}/depth_results/pos_scatter.png')
-    plt.close()
-    
-
-    if len(final_dueterium_zs) > len(final_tritium_zs):
-        final_ion_zs = final_dueterium_zs
-        final_ion_xs = final_dueterium_xs
-    else:
-        final_ion_zs = final_tritium_zs
-        final_ion_xs = final_tritium_xs
-
-  
-    if all([int(i) for i in settings_dict['replicate']]) == 1:
-        try:
-            surface_unit_cells = int(settings_dict['virtual_replicate'][0]*settings_dict['virtual_replicate'][1])
-            surface_area = None
-        except KeyError:
-            surface_area = (max(initial_carbon_xs) - min(initial_carbon_xs))*(max(initial_carbon_ys)-min(initial_carbon_ys))
-            surface_unit_cells = None
-    else:
-        surface_unit_cells = int(settings_dict['replicate'][0]*settings_dict['replicate'][1])
-        surface_area = None
-
-
-
-    surface_finder = Surface_finder(final_carbon_zs, surface_area_unit_cells=surface_unit_cells, surface_area=surface_area)
-    surface_finder.find_carbon(final_carbon_zs, cut_off_density_frac=0.5)
-    surface_finder.find_surface(surface_cut_off, ion_cut_off=-2,  carbon_density = True, averaging=False)
-    surface_finder.find_ions(final_ion_zs)
-    surface_finder.initial(initial_carbon_zs)
-
-
-    surfaces = dict(diamond_surface = [surface_finder.surface, surface_finder.surface_err], graphene_1 = [None,None])
-
-    initial_atoms_arr, region_indexes = tools.region_assign(initial, loaded = loaded)
-
-    for i in range(1,100):
-
-        layer_key = 'graphene_%s'%i
+        if self.repeats == False:
+            self.settings_dict =  tools.csv_reader(f"{self.path}/settings.csv")
 
         try:
-            layer_zs = [final_arr[index][-1] for index in region_indexes[layer_key]]
-
-            surfaces[layer_key] = tools.avg(layer_zs) 
-
-        except KeyError:
-            break
-
-    '''
-    side_area = (max(initial_carbon_zs) - min(initial_carbon_zs))*(max(initial_carbon_ys)-min(initial_carbon_ys))
-            
-    surface_finder_x = Surface_finder(final_carbon_xs, surface_area=side_area, surface_area_unit_cells=None)
-    xs_carbon, carbon_densities_x, cut_off_z = surface_finder_x.density(initial_carbon_xs)
-    xs_ions, ion_densities_x, cut_off_z = surface_finder_x.density(final_ion_xs)
+            os.mkdir(f"{self.path}/depth_results/")
+        except FileExistsError:
+            pass
 
 
-    plt.plot(xs_carbon, carbon_densities_x)
-    plt.plot(xs_ions, ion_densities_x)
-    plt.show()
+    def get_repeated_final_depths(self, file_paths):
 
-    '''
+        reflected_atoms = 0
+        bombard_zs = []
+        implanted_zs = []
+       
+        for path in file_paths:
+            repeat_final_arr = tools.xyz_to_array(f"{path}/final_indexed.xyz")
 
-    
-    ########################### Getting Pentration Depths ###########################
+            try:
+                bombard_atom_index = list(repeat_final_arr[:,0]).index(2)
+                bombard_z = float(repeat_final_arr[bombard_atom_index][-1])
+                bombard_zs.append(bombard_z)
 
-    print("\n\nPROGRESS: Getting penetration depths.") 
+                if bombard_z < self.surface_cut_off:
+                    reflected_atoms += 1
+                else:
+                    implanted_zs.append(bombard_z)
 
+            except ValueError:
+                reflected_atoms += 1
 
-    zs = [[],[],[],[],[]]
-    for atom in final_arr:
-        if atom[-1] > surfaces['diamond_surface'][0] - ion_cut_off :
-            zs[int(atom[0])].append(atom[-1])
+        self.reflected_atoms = reflected_atoms
+        self.bombard_zs = bombard_zs
+        self.implanted_zs = implanted_zs
+        self.no_of_repeats = len(file_paths)
 
-    diamond_pens = [[],[],[],[],[]]
-    for atom_type in range(0,5):
-        diamond_pens[atom_type] = [z - surfaces['diamond_surface'][0] for z in zs[atom_type]]
-
-    
-    for i in range(1,100):
-        layer_key = 'graphene_%s'%i
-
-        try:            
-            if len(region_indexes[layer_key]) == 0:
-                top_layer = 'diamond_surface'
-                break
-
-
-        except KeyError:
-            top_layer = 'graphene_%s'%(i-1)
-            break
+        plt.hist(implanted_zs,bins = 50)
+        plt.savefig(f'{self.path}/depth_results/depth_histogram.png', dpi = 300)
+        plt.close()
 
 
-    surface_pens = [[],[],[],[],[]]
-    for atom_type in range(0,5):
-        surface_pens[atom_type] = [z - surfaces[top_layer][0] for z in zs[atom_type]]
+        
+
+    def publish_repeat_txt(self):
+        
+        results = f'\nDepth results for {self.path} of {self.no_of_repeats} repeated single bombardments.\n'
+        results += f"\n{self.reflected_atoms}/{self.no_of_repeats} were reflected."
+        results += f"\n{len(self.implanted_zs)}/{self.no_of_repeats} were implanted.\n"
+
+        average, stderr = tools.avg(self.implanted_zs)
+        results += f'\nAverage final depth: {average:.6g} ± {stderr:.3g}\n'
+
+        results += "\nFinal implanted zs (for avg and hist):\n"
+        results += f"{self.implanted_zs}\n"
+
+        results += "\nFinal bombard zs:\n"
+        results += f"{self.bombard_zs}\n"
+
+        with open(f"{self.path}/depth_results/depth.txt", 'w') as fp: #rewriting edited input file
+            fp.write(results)
 
 
       
 
-    ####################### Getting Regions ##########################
 
-    print("\n\nPROGRESS: Getting Regions.") 
 
-    #creating dicts of counters for different regions and different atoms
-    region_counters = []
-    for atom_type in range(0,5):
-        region_count = dict(diamond_bulk = 0, on_surface = 0 )
-    
-        for key in surfaces:
-            region_count[key] = 0
+
+
+
+
+
         
-        region_counters.append(region_count)
+
+    def get_arrays(self):
+
+        self.initial = tools.file_proc(f"{self.path}/initial_indexed.xyz")
+        self.initial_arr = tools.xyz_to_array(f"{self.path}/initial_indexed.xyz")
+        self.final_arr = tools.xyz_to_array(f"{self.path}/final_indexed.xyz")
 
 
-    #filling counters with atoms in different regions
-    for atom_type in range (2,5): 
-        for z in zs[atom_type]: 
+    def get_surfaces(self):
 
-            if z - surfaces['diamond_surface'][0] > 0:
-                region_counters[atom_type]['diamond_bulk'] += 1
-            
-            elif z - surfaces[top_layer][0] < 0:
-                region_counters[atom_type]['on_surface'] += 1
+        print("\n\nPROGRESS: Determining heights of surfaces.") 
 
-            else:
-                for key, surface in surfaces.items():
-                    if z - surface[0] > 0:
-                        region_counters[atom_type][key] += 1
-                        break
+        initial_carbon_zs = [row[-1] for row in self.initial_arr if row[-4] == 1]
+        final_carbon_zs = [row[-1] for row in self.final_arr if row[-4] == 1]
+        final_carbon_xs = [row[-2] for row in self.final_arr if row[-4] == 1]
+        self.final_bombard_zs = [row[-1] for row in self.final_arr if row[-4] == 2]
+        final_bombard_xs = [row[-2] for row in self.final_arr if row[-4] == 2]
 
-
-
-     ################# Constructing results text file ####################
-
-    print("\n\nPROGRESS: Generating results.txt and graphs.") 
+        plt.scatter(final_carbon_xs, final_carbon_zs)
+        plt.scatter(final_bombard_xs, self.final_bombard_zs)
+        plt.ylim(20,-20)
+        plt.savefig(f'{self.path}/depth_results/pos_scatter.png')
+        plt.close()
 
 
-    results = f'Depth results for {path.split("/")[-1]}\n\n'
-    results += f'Diamond surface taken to be at height of {surfaces["diamond_surface"][0]:.6g}±{surfaces["diamond_surface"][1]:.6g}A.\n'
-    results += f'The {surface_finding_method} method was used to determine surface height.\n'
-    results += f'Carbon atoms beyond {surface_finder.surface_cut_off}A were discounted from surface average.\n'
-    results += f'Ions {ion_cut_off}A from the surface were discounted. \n\n'
+        surface_area = self.settings_dict['surface_area']
+        surface_unit_cells = surface_area/(3.567**2)
 
- 
-    for atom_type in range (2,5):
-        average, stderr = tools.avg(diamond_pens[atom_type])
-        results += f'\nIon {atom_type} Average Diamond Pen: '
+        self.surface_finder = Surface_finder(final_carbon_zs, surface_area_unit_cells=surface_unit_cells, surface_area=surface_area)
+        self.surface_finder.find_carbon(final_carbon_zs, cut_off_density_frac=0.5)
+        self.surface_finder.find_surface(self.surface_cut_off, ion_cut_off=-2,  carbon_density = True, averaging=False)
+        self.surface_finder.find_ions(self.final_bombard_zs)
+        self.surface_finder.initial(initial_carbon_zs)
+
+
+        self.diamond_surface = [self.surface_finder.surface, self.surface_finder.surface_err]
+
+
+
+    def get_penetration_depths(self):
+
+        self.zs = [z for z in self.final_bombard_zs if z > self.diamond_surface[0] - self.ion_cut_off]
+        self.bombard_penetration_depths = [z - self.diamond_surface[0] for z in self.zs]
+
+
+    def get_regions(self):
+
+        self.surface_atom_zs = [z for z in self.zs if z <= self.diamond_surface[0]]
+        self.bulk_atom_zs = [z for z in self.zs if z > self.diamond_surface[0]]
+
+
+
+    def publish_txt(self):
+
+        results = f'Depth results for {self.path.split("/")[-1]}\n\n'
+        results += f'Diamond surface taken to be at height of {self.diamond_surface[0]:.6g}±{self.diamond_surface[1]:.6g} A.\n'
+        results += f'The {self.surface_finding_method} method was used to determine surface height.\n'
+        results += f'Carbon atoms beyond {self.surface_finder.surface_cut_off}A were discounted from surface average.\n'
+        results += f'Ions {self.ion_cut_off}A from the surface were discounted. \n\n'
+        
+        average, stderr = tools.avg(self.bombard_penetration_depths)
+        results += f"\n{self.settings_dict['atom_type']} Ion Average Diamond Pen: "
         results += f'{average:.6g} ± {stderr:.3g}\n'
 
-        average, stderr = tools.avg(surface_pens[atom_type])
-        results += f'Ion {atom_type} Average Surface Pen: '
-        results += f'{average:.6g} ± {stderr:.3g}\n'
+        results += f"\n{self.settings_dict['atom_type']} Ions on surface - {len(self.surface_atom_zs)}"
+        results += f"\n{self.settings_dict['atom_type']} Ions on surface - {len(self.bulk_atom_zs)}"
 
-
-    for atom_type in range(2,5):
-        region_count = region_counters[atom_type]
-        for key, i in region_count.items():
-            if key != 'diamond_surface' and key != 'atom_type':
-                results += f'\nIon type {atom_type} locations: {key} - {i} atoms.'
         results += '\n'
+
+        results += f"\n\n{self.settings_dict['atom_type']} ion diamond pens: "
+        results += f'\n{self.bombard_penetration_depths}'
+
+        with open(f"{self.path}/depth_results/depth.txt", 'w') as fp: #rewriting edited input file
+            fp.write(results)
+
+
+    def publish_densities(self):
+        self.surface_finder.plot(f"{self.path}/depth_results/")
+        self.surface_finder.publish_txt_file(f"{self.path}/depth_results/")
+
+
+
+def main(args_dict):
+
+    if args_dict['repeats'] == None:
+        args_dict['repeats'] = tools.repeat_check(args_dict['path'])
+    else:
+        args_dict['repeats'] = tools.str_to_bool(args_dict['repeats'])
+
+    args_dict['path'] = tools.Path(args_dict['path'])
+
+    if tools.str_to_bool(args_dict['repeats']) == False:
+        depth = Depth(args_dict['path'], args_dict['repeats'])
+        depth.get_arrays()
+        depth.get_surfaces()
+        depth.get_penetration_depths()
+        depth.get_regions()
+        depth.publish_txt()
+        depth.publish_densities()
+
+    if tools.str_to_bool(args_dict['repeats']) == True:
         
-    results += '\n'
-    
-    for key in surfaces:
-        try:
-            results += f"\n{key} height: {surfaces[key][0]:.4g} ± {surfaces[key][1]:.1g}"
-        except TypeError:
-            pass
-    
+        bombard_dir = tools.bombard_directory()
+        repeat_dirs_path = glob.glob(f"{bombard_dir}/{args_dict['path']}/*")
 
-    for atom_type in range (2,5):
-        results += f'\n\nIon {atom_type} diamond pens: '
-        results += f'\n{diamond_pens[atom_type]}'
+        repeat_dirs_path = [path for path in repeat_dirs_path if path[-1] == 'r']
 
-        results += f'\n\nIon {atom_type} surface pens: '
-        results += f'\n{surface_pens[atom_type]}'
-
-
-    ################# Producing Plots and Saving Results #####################
-
-   
-
-    with open("%s/depth_results/depth.txt"%path, 'w') as fp: #rewriting edited input file
-        fp.write(results)
-
-
-    surface_finder.plot("%s/depth_results/"%path)
-    surface_finder.publish_txt_file("%s/depth_results/"%path)
+        depth = Depth(args_dict['path'], args_dict['repeats'])
+        depth.get_repeated_final_depths(repeat_dirs_path)
+        depth.publish_repeat_txt()
+ 
 
 
 
-if __name__ == '__main__':
 
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+if __name__ == "__main__":
 
-    dir_name = sys.argv[1]
-
-
-    path = current_dir + '/results/' +  dir_name
+    accepted_args = ['repeats', 'path']
 
     try:
-        main(path)
-        print("\n\nPROGRESS: Depth calculations complete.")
-        print("\n", "-"*20, '\n')
+        args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   
+    except IndexError:
+        print('\n\nERROR: Please give inputs.\n\n')
 
-    except FileNotFoundError:
-        print("\n\n")
-        print("-"*60)
-        print("\nERROR: Depth.py could not find initial_indexed.xyz or final_indexed file. "
-                "To create these file, run jmol_convert.py")
-        print("\nFile path used: %s"%path)
-        print("\n")
-        print("-"*60)
+    main(args_dict)
+
 
