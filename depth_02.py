@@ -37,7 +37,7 @@ class Depth:
         self.ion_cut_off = 2
 
         self.path = path
-        self.repeats = tools.str_to_bool(repeats)
+        self.repeats = repeats
 
         if self.repeats == False:
             self.settings_dict =  tools.csv_reader(f"{self.path}/settings.csv")
@@ -75,11 +75,7 @@ class Depth:
         self.implanted_zs = implanted_zs
         self.no_of_repeats = len(file_paths)
 
-        plt.hist(implanted_zs,bins = 50)
-        plt.savefig(f'{self.path}/depth_results/depth_histogram.png', dpi = 300)
-        plt.close()
-
-
+      
         
 
     def publish_repeat_txt(self):
@@ -99,6 +95,13 @@ class Depth:
 
         with open(f"{self.path}/depth_results/depth.txt", 'w') as fp: #rewriting edited input file
             fp.write(results)
+
+        plt.hist(self.implanted_zs,bins = 50)
+        plt.xlabel('Depth / A')
+        plt.title('Depth of implanted atoms')
+        plt.savefig(f'{self.path}/depth_results/depth_histogram.png', dpi = 300)
+        plt.close()
+
 
 
       
@@ -202,7 +205,7 @@ def main(args_dict):
 
     args_dict['path'] = tools.Path(args_dict['path'])
 
-    if tools.str_to_bool(args_dict['repeats']) == False:
+    if args_dict['repeats'] == False:
         depth = Depth(args_dict['path'], args_dict['repeats'])
         depth.get_arrays()
         depth.get_surfaces()
@@ -211,7 +214,7 @@ def main(args_dict):
         depth.publish_txt()
         depth.publish_densities()
 
-    if tools.str_to_bool(args_dict['repeats']) == True:
+    if args_dict['repeats'] == True:
         
         bombard_dir = tools.bombard_directory()
         repeat_dirs_path = glob.glob(f"{bombard_dir}/{args_dict['path']}/*")

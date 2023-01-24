@@ -5,25 +5,38 @@ import os
 import tools
 import sys
 from datetime import datetime
+import glob
 
 
 
 class Track:
 
-     def __init__(self, file_name, srun_name = 'srun'):
+     def __init__(self, file_name, srun_name = 'srun', repeats = False):
 
           self.file_name = file_name
           self.srun_name = srun_name
           self.dir_path = os.path.dirname(os.path.realpath(__file__))
+          self.repeats = repeats
+          if self.repeats == False:
 
-          self.job_ids = self.get_ids()
-          self.recent_job = max(self.job_ids)
+               self.job_ids = self.get_ids()
+               self.recent_job = max(self.job_ids)
 
-          self.job_str = self.get_job_details()
+               self.job_str = self.get_job_details()
+
+          
+          elif self.repeats == True:
+               
+               
+               self.recent_job =  self.get_ids_for_repeats()
+
+               self.job_str = self.get_job_details()
+
 
           self.new_file_check()
-
           self.publish_details()
+
+ 
 
 
      def get_ids(self, time = False):
@@ -48,6 +61,8 @@ class Track:
           job_ids = [vals[0] for vals in jobs_list if vals[0] != "'"]
           job_ids = [int(i) for i in job_ids]
 
+          print(f'\n\n{len(job_ids)} jobs in queue.\n\n')
+
           if time == True:
                times = [vals[5] for vals in jobs_list if vals[0] != "'"]
                return job_ids, times
@@ -55,12 +70,81 @@ class Track:
           else:
                return job_ids
 
+     def check_for_new_id(self):
+
+          job_file = tools.file_proc(f"{self.dir_path}/current_jobs.txt", seperator="-"*40)
+
+        
+          for line in job_file[1].split('\n'):
+               line = line.split(' ')
+     
+               if line[0] == 'Job':
+                    last_id = line[2]
+                    print(f"LAST_ID = {last_id}")
+                    return last_id
+          
+
+     def get_ids_for_repeats(self):
+          all_ids = self.get_ids()
+          last_id = self.check_for_new_id()
+
+          all_ids.sort(reverse=True)
+   
+          
+          try:
+               new_ids = all_ids[:all_ids.index(int(last_id))]
+               print('INDEX', all_ids.index(int(last_id)))
+          except ValueError:
+               print("VALUEERROR")
+               new_ids = all_ids
+
+          print(all_ids)
+          print()
+          print(new_ids)
+
+          
+
+          out_str = ''
+
+          id_list_of_lists = []
+
+          differences = [int(id_str) - int(new_ids[i+1])  for i, id_str in enumerate(new_ids[:-1])]
+          gap_indexes = [i for i, difference in enumerate(differences) if difference != 1]
+  
+          if len(gap_indexes) == 0:
+               id_list_of_lists = [new_ids]
+          else:
+               start = 0
+               for i2, index in enumerate(gap_indexes):
+                    id_list_of_lists.append(new_ids[start:index+1])
+                    start = index+1
+
+          output_str = ''
+          for id_list in id_list_of_lists:
+               if len(id_list) > 2:
+                    output_str += f"{max(id_list)} - {min(id_list)}, "
+               elif len(id_list) == 2:
+                    output_str += f"{max(id_list)}, {min(id_list)}, "
+               else:
+                    output_str += f"{max(id_list)}, "
+
+
+          return output_str
+
+
+
+
      def get_job_details(self):
 
-          settings_dict = tools.csv_reader(f"{self.dir_path}/results/{self.file_name}/settings.csv")
+          if self.repeats == True:
+               file_name = f'{self.file_name}/0r'
+          else:
+               file_name = self.file_name
+
+          settings_dict = tools.csv_reader(f"{self.dir_path}/results/{file_name}/settings.csv")
           settings_str = tools.cvs_maker("", settings_dict, write = False)
 
-          srun_file = tools.file_proc(f"{self.dir_path}/results/{self.file_name}/{self.srun_name}")
+          srun_file = tools.file_proc(f"{self.dir_path}/results/{file_name}/{self.srun_name}")
 
           srun_str = ''
           node_info = False
@@ -82,12 +166,34 @@ class Track:
           now = now.strftime("%d/%m/%Y %H:%M:%S")
 
           job_details_str = f'\n{now}'
-          job_details_str += f'\nJob ID: {self.recent_job}'
+          job_details_str += f'\nJob ID(s): {self.recent_job}'
           job_details_str += f'\nFile Name: {self.file_name}'
+
+          if self.repeats == True:
+               job_details_str += f"\nRepeats: {len(glob.glob(f'{self.dir_path}/results/{self.file_name}/*r'))}"
+
           job_details_str += f'\n\n{settings_str}'
           job_details_str += f'{srun_str}'
 
           return job_details_str
+
+     def current_jobs_names_dict(self):
+
+          current_jobs_names_dict = dict()
+          jobs = tools.file_proc(f"{tools.bombard_directory()}/current_jobs.txt", seperator= "-"*40) 
+
+          for job in jobs:
+               for line in job.split('\n'):
+                    line = line.split(': ')
+
+                    if line[0] == 'Job ID(s)':
+                         ids = line[-1]
+
+                    elif line[0] == 'File Name':
+                         current_jobs_names_dict[line[-1]] = ids
+                         break 
+
+          return current_jobs_names_dict
 
 
      def publish_details(self):
@@ -165,8 +271,69 @@ def analysis_check(file_name):
      return file_exists, failed, analysis_performed, cleanup_performed
           
 
+def check_repeat_progress(args_dict):
+     bombard_dir = tools.bombard_directory()
+     path = args_dict['path']
+     repeat_paths = glob.glob(f"{bombard_dir}/{path}/*r")
+
+     current_job_names = Track.current_jobs_names_dict(self=None)
+     
+     running_sims = 0
+     failed_sims = 0
+     complete_sims = 0
+     failed_sims_list = []
+     for path in repeat_paths:
+          try:
+               open(f'{path}/0.xyz')
+               running_sims += 1
+
+               out_files = tools.file_proc(f'{path}/OUT')
+               out_files.reverse()
+
+               for line in out_files[:100]:
+                    line = line.split(':')
+
+                    if line[0] == 'Total wall time':
+                         complete_sims += 1
+                         break
+
+                    elif line[0] == 'slurmstepd':
+                         failed_sims += 1
+                         failed_sims_list.append(path.split('/')[-1])
+                         break
+
+          except FileNotFoundError:
+               pass
+
+    
+     try:
+          running_perc = running_sims*100/len(repeat_paths)
+          complete_perc = complete_sims*100/len(repeat_paths)
+     except ZeroDivisionError:
+          raise FileNotFoundError(f'Could not find repeats in {bombard_dir}/{path}/*r')
+
+     file_name = path.split('/')[-2]
+
+     ids = current_job_names[file_name]
+
+     print(f"\nJob ID(s): {ids}")
+     print(f"File name: {file_name}")
+     print(f"Failed simulations detected: {failed_sims}/{len(repeat_paths)}")
+     print(f'Repeats Running: {running_sims}/{len(repeat_paths)} ({running_perc:.3g}%)')
+     print(f"Repeats Complete: {complete_sims}/{len(repeat_paths)} ({complete_perc:.3g}%)")
+     bars = int(running_sims*50/len(repeat_paths))
+     print('Repeats Running:  |','#'*bars,"_"*(50-bars),'|')
+     bars = int(complete_sims*50/len(repeat_paths))
+     print('Repeats Complete: |','#'*bars,"_"*(50-bars),'|')
+     if failed_sims != 0:
+          out = 'Failed simulation directories:\n'
+          for fail_dir in failed_sims_list:
+               out += f"{fail_dir}, "
+          print(out)
+               
 
 
+     return running_sims, len(repeat_paths)
 
 
 
@@ -406,6 +573,8 @@ def get_info(job_id, only_progress = False):
 
 
 
+
+
 def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
      jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
@@ -452,7 +621,27 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
 
 
+def main(args_dict):
 
+     if tools.str_to_bool(args_dict['repeats']) == True:
+          check_repeat_progress(args_dict)
+
+     elif tools.str_to_bool(args_dict['recent']) == True:
+          recent_jobs()
+
+     elif tools.str_to_bool(args_dict['multi']):
+          if tools.str_to_bool(args_dict['last_jobs']) == True:
+               run_multi_analysis(last_jobs=int(sys.argv[3]))
+
+          if tools.str_to_bool(args_dict['ids']) == True:
+               run_multi_analysis(job_ids = sys.argv[3:])
+
+          if tools.str_to_bool(args_dict['names']) == True:
+               run_multi_analysis(file_names = sys.argv[3:])
+
+     else:
+          job_id = sys.argv[1]
+          get_info(job_id)
 
 
 
@@ -465,30 +654,21 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
    
 if __name__ == "__main__":
 
+     accepted_args = ['repeats', 'multi', 'ids', 'names', 'last_names', 'recent', 'path']
+
      if len(sys.argv) == 1:
           all_jobs_progress()
 
-     else:
-          if sys.argv[1] == "-help":
-               print("\n\nTo get job info, give job ID as arguemnt.")
-               print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
+     elif sys.argv[1] == "-help":
+          print("\n\nTo get job info, give job ID as arguemnt.")
+          print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
 
-          if sys.argv[1] == "-recent":
-               recent_jobs()
+     else: 
+          args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   
+          main(args_dict)
 
-          if sys.argv[1] == '-multi':
-               if sys.argv[2] == '-last_jobs':
-                    run_multi_analysis(last_jobs=int(sys.argv[3]))
 
-               if sys.argv[2] == '-ids':
-                    run_multi_analysis(job_ids = sys.argv[3:])
-
-               if sys.argv[2] == '-names':
-                    run_multi_analysis(file_names = sys.argv[3:])
-
-          elif sys.argv[1] != '-help' and sys.argv[1] != 'multi' and sys.argv[1] != '-recent':
-               job_id = sys.argv[1]
-               get_info(job_id)
+          
 
 
           

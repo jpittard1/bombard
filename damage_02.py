@@ -34,10 +34,16 @@ class Damage:
 
         for path in paths:
             dsp_file = tools.file_proc(f"{path}/final.dsp")
-            array, titles = tools.custom_to_array(dsp_file)
-            etched_atoms.append([row[-1] for row in array if row[-1] < - 2])
-            vacancy_zs.append([self.find_original_position(array[i][-3:], array[i][1:4])[-1] for i, dsp in enumerate(array[:,4]) if dsp > 0.5])
-            max_displacements.append(max(array[:,4]))
+       
+            try:
+                array, titles = tools.custom_to_array(dsp_file)
+                etched_atoms.append([row[-1] for row in array if row[-1] < - 2])
+                vacancy_zs.append([self.find_original_position(array[i][-3:], array[i][1:4])[-1] for i, dsp in enumerate(array[:,4]) if dsp > 0.5])
+                max_displacements.append(max(array[:,4]))
+            except UnboundLocalError:
+                print(f"Failed path: {path}")
+                pass
+
 
         self.etched_atoms = [len(etched) for etched in etched_atoms]
         self.etched_atom_zs = sum(etched_atoms,[])
@@ -45,6 +51,8 @@ class Damage:
         self.all_vancancy_zs = sum(vacancy_zs, [])
         self.max_displacements = max_displacements
         self.no_of_repeats = len(paths)
+     
+
 
 
     def find_original_position(self, final, dsp):

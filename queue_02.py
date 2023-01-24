@@ -22,10 +22,10 @@ lammps_files_path = "%s/LAMMPS_files"%dir_path
 #these settings below should all be elsewhere really
 #maybe a seperate input file? as there are multiple LAMMPS ones
 
-energy = 80
+energy = 240
 temp = 300
-bombard_atom = 'h'
-repeats = 50
+bombard_atom = 'd'
+repeats = 30
 
 
 test = False

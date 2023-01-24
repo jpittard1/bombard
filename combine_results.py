@@ -19,8 +19,8 @@ def depth_reader(file):
         if len(line)>0:
             if line[0] == 'Depth':
                 dir_name = line[3].split('/')[-2]
-                print(f"\n\nDIRName: {dir_name}\n\n")
                 depth_results_dict['dir_name'] = dir_name
+                print(f'depth dirname : {dir_name}')
                 depth_results_dict['atom_type'] = dir_name.split('_')[0]
                 depth_results_dict['energy'] = dir_name.split('_')[1][:-2]
                 depth_results_dict['repeats'] = line[5]
@@ -51,6 +51,7 @@ def damage_reader(file):
             if line[0] == 'Damage':
                 dir_name = line[3].split('/')[-2]
                 damage_results_dict['dir_name'] = dir_name
+                print(f'DIRNAME: {dir_name}')
                 damage_results_dict['atom_type'] = dir_name.split('_')[0]
                 damage_results_dict['energy'] = dir_name.split('_')[1][:-2]
                 damage_results_dict['repeats'] = line[5]
@@ -114,12 +115,11 @@ def main(args_dict):
             break
         count += 1
 
-    
-    import pprint
-    pprint.pprint(valid_files)
 
-    depth_dicts = []
+    analysis_dicts = dict()
     sep = ', '
+
+    valid_files.sort()
  
     for i, file in enumerate(valid_files):
 
@@ -128,11 +128,18 @@ def main(args_dict):
         elif args_dict['analysis'] == 'damage':
             analysis_dict = damage_reader(file)
 
+        analysis_dicts[analysis_dict['energy']] = analysis_dict
+
+    energies = [int(energy) for energy in list(analysis_dicts.keys())]
+    energies.sort()
+
+    for i, energy in enumerate(energies):
+
         if i == 0:
             titles =  analysis_dict.keys()
-            out_str = sep.join(titles) + '\n\n'
+            out_str = sep.join(titles) + '\n'
 
-        out_str += sep.join(analysis_dict.values()) + '\n'
+        out_str += sep.join(analysis_dicts[str(energy)].values()) + '\n'
 
     with open(f"{tools.bombard_directory()}/{args_dict['path']}combined_{args_dict['analysis']}.csv", 'w') as fp: #rewriting edited input file
         fp.write(out_str)

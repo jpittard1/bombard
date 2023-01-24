@@ -113,20 +113,20 @@ def main(all_xyz_file_path):
     with open("%s/jmol_all.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(jmol_str)
     
-    with open("%s/initial.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
-        fp.write(frames[0].present_arr(jmol = True))
+    #with open("%s/initial.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
+    #    fp.write(frames[0].present_arr(jmol = True))
 
     with open("%s/initial_indexed.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(frames[0].present_arr())
 
-    with open("%s/final.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
-        fp.write(frame.present_arr(jmol = True))
+    #with open("%s/final.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
+    #    fp.write(frame.present_arr(jmol = True))
 
     with open("%s/final_indexed.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
         fp.write(frame.present_arr())
 
-    with open("%s/equilibrium_indexed.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
-        fp.write(frames[equilibrium_index].present_arr())
+    #with open("%s/equilibrium_indexed.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
+    #    fp.write(frames[equilibrium_index].present_arr())
     
     
 

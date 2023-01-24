@@ -211,6 +211,7 @@ def main(user_input_dict):
     os.system(f"mv log.lammps {dir_name}")
     os.system(f"mv {dir_name} data_files/{dir_name}")
     
+    print(f"Rotation applied: {rotation_deg}")
 
 
 

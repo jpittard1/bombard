@@ -293,7 +293,7 @@ target = 'results/testing/flux'
 
 target = 'results/testing/size/12_12_6'
 target = 'results/final/to_compare'
-target = 'results/orient/111/to_compare'
+target = 'results/orient/new_111/'
 
 all_paths = []
 for i in range(0,10):
@@ -326,7 +326,7 @@ os.system(f"mkdir {to_save_path}/combined_steinhardt")
 combine = Combine(all_paths)
 #
 
-combine.steinhardt(to_save_path=f"{to_save_path}/combined_steinhardt/")
+#combine.steinhardt(to_save_path=f"{to_save_path}/combined_steinhardt/")
 
 combine.depth(ions = True, to_save_path=f"{to_save_path}/combined_depth/")
 combine.depth(carbon_final = True, to_save_path=f"{to_save_path}/combined_depth/")

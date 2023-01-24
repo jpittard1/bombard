@@ -16,13 +16,28 @@
     # Compare changing in carbon atom poistions
     # Way of tracking errosion? difference between initial surface hight and final for diamond
 
+'''
+Requirements and Considations
+    - Single Atom Bombards
+        - Average final depth
+        - Average max depth
+        - Histograms of depths
+        - Path?
+    - Multibombard
+        - Same as above should be fine
+        - Remove histgrams 
+        - Dpeth profiles can be given by surface analysis
+
+'''
+
 import os
 import sys
 import tools
 import numpy as np
 import matplotlib.pylab as plt
 
-def main(path):
+
+def main_old(path):
 
     print("\n\nPROGRESS: Running depth.py.") 
 

@@ -19,6 +19,8 @@ class Path:
     def __init__(self, path):
 
         self.path = path
+        #self.dir_check()
+
         self.sep = '/'
 
     def __repr__(self) -> str:
@@ -30,6 +32,21 @@ class Path:
             return self.sep.join(trimmed_path)
         else:
             return trimmed_path
+    
+    def __add__(self, string):
+        return Path(f"{self.path}/{string}")
+
+    def dir_check(self, path_arg = None):
+            try:
+                print(f"\nSELF 1-: {self[-1]}")
+                self[-1].index('.')
+                
+            except ValueError:
+                
+                self.path = self.path + '/'
+                
+
+    
     
 
 class Input_files():
@@ -444,7 +461,7 @@ def time_convert(val, time_to_sec = False, sec_to_time = False, time_of_day = Fa
 
 
 def bombard_directory():
-    return os.path.dirname(os.path.realpath(__file__))
+    return Path(os.path.dirname(os.path.realpath(__file__)))
 
 def time_add(time1_str, time2_str, add = True, subtract = False, time_of_day = False):
     time1 = time_convert(time1_str, time_to_sec=True)
