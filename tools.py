@@ -27,7 +27,10 @@ class Path:
         return self.path
 
     def __getitem__(self, index):
-        trimmed_path = self.path.split('/')[index]
+        if self.path[-1] == '/':
+            trimmed_path = self.path.split('/')[index - 1]
+        else:
+            trimmed_path = self.path.split('/')[index]
         if type(trimmed_path) == list:
             return self.sep.join(trimmed_path)
         else:
@@ -779,3 +782,5 @@ if __name__ == '__main__':
 
     
     print(input_file.create_repeats(3, temp = 300)[0])
+
+
