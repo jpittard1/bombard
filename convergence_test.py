@@ -9,7 +9,12 @@ import damage_02 as damage
 import depth_02 as depth
 import matplotlib.pyplot as plt
 import time
+from tqdm import tqdm
 
+###TODO###
+#Fundemental error in this method, will always converge to the larger value as you are just sampling more of it.
+#Instead need to samples UNIQUE sets, then standard deviation of these sets should given and indication of how far off it is
+#Due to this limitation, go up to sample size of 380 and repeat this 5 times (for unique sets)
 
 def main(args_dict):
 
@@ -19,7 +24,7 @@ def main(args_dict):
     args_dict['average_over'] = int(args_dict['average_over'])
 
     
-    repeat_dirs = glob.glob(f"{tools.bombard_directory()}/{args_dict['path']}/*r")
+    repeat_dirs = glob.glob(f"{tools.bombard_directory()}{args_dict['path']}*r")
     repeat_dirs = [tools.Path(repeat_dir) for repeat_dir in repeat_dirs]
     root_dir = repeat_dirs[0][:-1]
     repeats_nums = [int(dir_name[-1][:-1]) for dir_name in repeat_dirs]
@@ -39,18 +44,16 @@ def main(args_dict):
                         ) 
 
     start_time = time.time()
-    for sample_size in sample_sizes:
-        
-        print(f'Running sample size of {sample_size}...')
-        #depth_to_average =  np.zeros([args_dict['average_over'],2])
-        #damage_to_average = np.zeros([args_dict['average_over'],4])
+    results_arr = np.zeros([len(sample_sizes),21])
 
+    for sample_size_index, sample_size in enumerate(tqdm(sample_sizes, desc=f'Overall', ascii=False, ncols = 100)):
+        
         to_average_arr =  np.zeros([args_dict['average_over'],10])
 
-        for repeat in range(args_dict['average_over']):
+        for repeat in tqdm(range(args_dict['average_over']), desc=f'Sample size - {sample_size}', ascii=False, ncols = 100):
             sample_dirs = random.sample(repeats_nums, sample_size)
         
-            sample_dirs = [tools.Path(f"{root_dir}/{sample_dir}r/") for sample_dir in sample_dirs]
+            sample_dirs = [tools.Path(f"{root_dir}{sample_dir}r") for sample_dir in sample_dirs]
          
             damage_obj = damage.Damage(repeats=True, path=root_dir)
             damage_obj.get_repeated_damage_array(sample_dirs)
@@ -73,11 +76,17 @@ def main(args_dict):
                 ])
 
 
-   
+        
+        results_arr[sample_size_index][0] = sample_size
         for i, key in enumerate(averages_dict.keys()):
             avg, err = tools.avg(to_average_arr[:,i])
             averages_dict[key][0].append(avg)
             averages_dict[key][1].append(err)
+
+            results_arr[sample_size_index][2*i + 1] = avg
+            results_arr[sample_size_index][2*i + 2] = err
+
+
         
     print(f'\nThis took {(time.time() - start_time):.6g} s')
     
@@ -86,20 +95,22 @@ def main(args_dict):
         sample_size_log = [np.log10(x) for x in sample_sizes]
 
         if type(averages_dict[key][0]) == list:
-            plt.errorbar(x = sample_size_log, y= averages_dict[key][0], yerr=averages_dict[key][1])
+            plt.errorbar(x = sample_size_log, y = averages_dict[key][0], yerr=averages_dict[key][1])
         else:
             plt.plot(x = sample_size_log, y = averages_dict[key])
         plt.xlabel('Log Sample Size')
         plt.ylabel(key)
-        plt.savefig(f"{tools.bombard_directory()}/{args_dict['path']}/converge_{key}.png", dpi = 300)
+        plt.savefig(f"{tools.bombard_directory()}{args_dict['path']}converge_{key}.png", dpi = 300)
         plt.close()
 
+    sep = ', err, '
+    results = 'sample_size, ' + sep.join(averages_dict.keys())
     sep = ', '
-    results = sep.join(averages_dict.keys())
-    for row in to_average_arr:
+
+    for row in results_arr:
         line = [str(x) for x in row]
         results += f"\n{sep.join(line)}"
-    with open(f"{tools.bombard_directory()}/{args_dict['path']}/converge.csv", 'w') as fp: #rewriting edited input file
+    with open(f"{tools.bombard_directory()}{args_dict['path']}converge.csv", 'w') as fp: #rewriting edited input file
         fp.write(results)
 
 
