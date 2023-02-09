@@ -1,12 +1,13 @@
 
 
 import subprocess
-import os
+from os import path as os_path
 import tools
-import sys
+from sys import argv
 from datetime import datetime
-import glob
-
+from glob import glob
+from tqdm import tqdm
+import shutil
 
 
 class Track:
@@ -15,7 +16,7 @@ class Track:
 
           self.file_name = file_name
           self.srun_name = srun_name
-          self.dir_path = os.path.dirname(os.path.realpath(__file__))
+          self.dir_path = os_path.dirname(os_path.realpath(__file__))
           self.repeats = repeats
           if self.repeats == False:
 
@@ -41,7 +42,7 @@ class Track:
 
      def get_ids(self, time = False):
 
-          current_dir = os.path.dirname(os.path.realpath(__file__))
+          current_dir = os_path.dirname(os_path.realpath(__file__))
 
           proc = subprocess.Popen(["squeue -u jp17358", current_dir], stdout=subprocess.PIPE, shell=True) 
 
@@ -80,7 +81,6 @@ class Track:
      
                if line[0] == 'Job':
                     last_id = line[2]
-                    print(f"LAST_ID = {last_id}")
                     return last_id
           
 
@@ -93,14 +93,10 @@ class Track:
           
           try:
                new_ids = all_ids[:all_ids.index(int(last_id))]
-               print('INDEX', all_ids.index(int(last_id)))
+
           except ValueError:
-               print("VALUEERROR")
                new_ids = all_ids
 
-          print(all_ids)
-          print()
-          print(new_ids)
 
           
 
@@ -170,7 +166,7 @@ class Track:
           job_details_str += f'\nFile Name: {self.file_name}'
 
           if self.repeats == True:
-               job_details_str += f"\nRepeats: {len(glob.glob(f'{self.dir_path}/results/{self.file_name}/*r'))}"
+               job_details_str += f"\nRepeats: {len(glob(f'{self.dir_path}/results/{self.file_name}/*r'))}"
 
           job_details_str += f'\n\n{settings_str}'
           job_details_str += f'{srun_str}'
@@ -182,7 +178,7 @@ class Track:
           current_jobs_names_dict = dict()
           jobs = tools.file_proc(f"{tools.bombard_directory()}/current_jobs.txt", seperator= "-"*40) 
 
-          for job in jobs:
+          for job in tqdm(jobs, 'Reading current_jobs.txt'):
                for line in job.split('\n'):
                     line = line.split(': ')
 
@@ -227,7 +223,7 @@ class Track:
 
 
           if old_month != current_month:
-               os.system(f"mv {self.dir_path}/current_jobs.txt {self.dir_path}/job_history/jobs_{old_month}_{current_year}")
+               shutil.move(f'{self.dir_path}/current_jobs.txt', f'{self.dir_path}/job_history/jobs_{old_month}_{current_year}')
 
                with open(f"{self.dir_path}/current_jobs.txt", 'w') as fp:
                     fp.write(' ') 
@@ -274,41 +270,91 @@ def analysis_check(file_name):
 def check_repeat_progress(args_dict):
      bombard_dir = tools.bombard_directory()
      path = args_dict['path']
-     repeat_paths = glob.glob(f"{bombard_dir}/{path}/*r")
-
+     repeat_paths = glob(f"{bombard_dir}{path}/*r")
+     print(f"Checking current_jobs.txt")
      current_job_names = Track.current_jobs_names_dict(self=None)
      
      running_sims = 0
      failed_sims = 0
      complete_sims = 0
+     analysed_sims = 0
+     clean_dirs = 0
      failed_sims_list = []
-     for path in repeat_paths:
-          try:
-               open(f'{path}/0.xyz')
+     analysis_started  = False
+
+
+     analysed_dirs = [tools.Path(path)[-1] for path in glob(f"{bombard_dir}{path}/*r/all.xyz")]
+     clean__dirs = [path for path in analysed_dirs if os_path.exists(f"{path}/xyz_files/0.xyz") == False]
+
+     raw_paths = [path for path in repeat_paths if path not in analysed_dirs]
+     running_paths = [path for path in raw_paths if os_path.exists(f"{path}/OUT") == True]
+
+     for path in running_paths:
+
+          out_files = tools.file_proc(f'{path}/OUT')
+          out_files.reverse()
+
+          for line in out_files[:50]:
+               line = line.split(':')
+
+               if line[0] == 'Total wall time':
+                    complete_sims += 1
+                    break
+
+               elif line[0] == 'slurmstepd':
+                    failed_sims += 1
+                    failed_sims_list.append(path.split('/')[-1])
+                    break
+
+
+
+     
+
+
+
+
+
+     for path in tqdm(repeat_paths, desc = 'Reading files'):
+          
+          analysis_check = tools.path_check(f'{path}/all.xyz')
+      
+          if analysis_check == True:
+               analysis_started = True
+               analysed_sims += 1
+               complete_sims += 1
                running_sims += 1
 
-               out_files = tools.file_proc(f'{path}/OUT')
-               out_files.reverse()
+               clean_check = tools.path_check(f'{path}/xyz_files/0.xyz')
+               if clean_check == False:
+                    clean_dirs += 1
 
-               for line in out_files[:100]:
-                    line = line.split(':')
+          elif analysis_started == False:
+               running_check = tools.path_check(f'{path}/0.xyz')
 
-                    if line[0] == 'Total wall time':
-                         complete_sims += 1
-                         break
+               if running_check == True:
+                    running_sims += 1
 
-                    elif line[0] == 'slurmstepd':
-                         failed_sims += 1
-                         failed_sims_list.append(path.split('/')[-1])
-                         break
+                    out_files = tools.file_proc(f'{path}/OUT')
+                    out_files.reverse()
 
-          except FileNotFoundError:
-               pass
+                    for line in out_files[:50]:
+                         line = line.split(':')
 
-    
+                         if line[0] == 'Total wall time':
+                              complete_sims += 1
+                              break
+
+                         elif line[0] == 'slurmstepd':
+                              failed_sims += 1
+                              failed_sims_list.append(path.split('/')[-1])
+                              break
+
+
      try:
           running_perc = running_sims*100/len(repeat_paths)
           complete_perc = complete_sims*100/len(repeat_paths)
+          analysed_perc = analysed_sims*100/len(repeat_paths)
+          clean_perc = clean_dirs*100/len(repeat_paths)
      except ZeroDivisionError:
           raise FileNotFoundError(f'Could not find repeats in {bombard_dir}/{path}/*r')
 
@@ -319,18 +365,45 @@ def check_repeat_progress(args_dict):
      print(f"\nJob ID(s): {ids}")
      print(f"File name: {file_name}")
      print(f"Failed simulations detected: {failed_sims}/{len(repeat_paths)}")
-     print(f'Repeats Running: {running_sims}/{len(repeat_paths)} ({running_perc:.3g}%)')
-     print(f"Repeats Complete: {complete_sims}/{len(repeat_paths)} ({complete_perc:.3g}%)")
-     bars = int(running_sims*50/len(repeat_paths))
-     print('Repeats Running:  |','#'*bars,"_"*(50-bars),'|')
-     bars = int(complete_sims*50/len(repeat_paths))
-     print('Repeats Complete: |','#'*bars,"_"*(50-bars),'|')
+
+     if analysis_started == False:
+          print(f'Repeats Running: {running_sims}/{len(repeat_paths)} ({running_perc:.3g}%)')
+          print(f"Repeats Complete: {complete_sims}/{len(repeat_paths)} ({complete_perc:.3g}%)")
+
+     print(f"Repeats Analysed: {analysed_sims}/{len(repeat_paths)} ({analysed_perc:.3g}%)")
+     print(f"Clean directories: {clean_dirs}/{len(repeat_paths)} ({clean_perc:.3g}%)")
+
+     if analysis_started == False:
+          bars = int(running_sims*50/len(repeat_paths))
+          print('Repeats Running:  |','#'*bars,"_"*(50-bars),'|')
+          bars = int(complete_sims*50/len(repeat_paths))
+          print('Repeats Complete: |','#'*bars,"_"*(50-bars),'|')
+
+     bars = int(analysed_sims*50/len(repeat_paths))
+     print('Repeats Analysed: |','#'*bars,"_"*(50-bars),'|')
+     bars = int(clean_dirs*50/len(repeat_paths))
+     print('Clean directories: |','#'*bars,"_"*(50-bars),'|')
+
      if failed_sims != 0:
           out = 'Failed simulation directories:\n'
           for fail_dir in failed_sims_list:
                out += f"{fail_dir}, "
           print(out)
                
+          remove_yn = tools.input_misc('Remove all failed directories (y/n)? ', ['y','n'])
+
+          if remove_yn == 'y':
+               print("This will delete:")
+               for fail_dir in failed_sims_list:
+                    print(f'   {bombard_dir}/{args_dict["path"]}/{fail_dir}')
+
+               cont_yn = tools.input_misc('Do you wish to continue (y/n)? ', ['y','n'])
+
+               if cont_yn == 'y':
+
+                    for fail_dir in tqdm(failed_sims_list, desc = 'Deleting', ascii= False, ncols=100):
+                         shutil.rmtree(f'{bombard_dir}/{args_dict["path"]}/{fail_dir}')
+
 
 
      return running_sims, len(repeat_paths)
@@ -339,7 +412,7 @@ def check_repeat_progress(args_dict):
 
 def recent_jobs():
      
-     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
+     jobs = tools.file_proc(f"{os_path.dirname(os_path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
      jobs.remove('')
      print(f"Last Completed Jobs:")
      completed_jobs = []
@@ -464,7 +537,7 @@ def check_progress(file_name, id):
      except ValueError:
           return None, None, None
 
-     log = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/results/{file_name}/log.lammps", seperator='\n\n')
+     log = tools.file_proc(f"{os_path.dirname(os_path.realpath(__file__))}/results/{file_name}/log.lammps", seperator='\n\n')
      log = [i for i in log if i != '']
 
      start = log[0].split('\n')
@@ -491,7 +564,7 @@ def check_progress(file_name, id):
 def get_info(job_id, only_progress = False):
 
      success = False
-     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40) 
+     jobs = tools.file_proc(f"{os_path.dirname(os_path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40) 
 
      for job in jobs:
           job_lines = job.split('\n')
@@ -577,7 +650,7 @@ def get_info(job_id, only_progress = False):
 
 def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
-     jobs = tools.file_proc(f"{os.path.dirname(os.path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
+     jobs = tools.file_proc(f"{os_path.dirname(os_path.realpath(__file__))}/current_jobs.txt", seperator= "-"*40)
 
      to_run_file_names = []
 
@@ -613,8 +686,7 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
      
      for file_name in to_run_file_names:
-          os.system(f"python lint.py True {file_name}")
-
+          subprocess.run(['python', 'lint.py', 'True', f'{file_name}'])
 
      print(f"\n\nAnalysis attempted for: {to_run_file_names}\n\n")
      
@@ -631,16 +703,16 @@ def main(args_dict):
 
      elif tools.str_to_bool(args_dict['multi']):
           if tools.str_to_bool(args_dict['last_jobs']) == True:
-               run_multi_analysis(last_jobs=int(sys.argv[3]))
+               run_multi_analysis(last_jobs=int(argv[3]))
 
           if tools.str_to_bool(args_dict['ids']) == True:
-               run_multi_analysis(job_ids = sys.argv[3:])
+               run_multi_analysis(job_ids = argv[3:])
 
           if tools.str_to_bool(args_dict['names']) == True:
-               run_multi_analysis(file_names = sys.argv[3:])
+               run_multi_analysis(file_names = argv[3:])
 
      else:
-          job_id = sys.argv[1]
+          job_id = argv[1]
           get_info(job_id)
 
 
@@ -656,15 +728,15 @@ if __name__ == "__main__":
 
      accepted_args = ['repeats', 'multi', 'ids', 'names', 'last_names', 'recent', 'path']
 
-     if len(sys.argv) == 1:
+     if len(argv) == 1:
           all_jobs_progress()
 
-     elif sys.argv[1] == "-help":
+     elif argv[1] == "-help":
           print("\n\nTo get job info, give job ID as arguemnt.")
           print("\nUse -multi followed by -last_jobs, -ids or -names and relevent arguments, to run analysis on multiple files.\n")
 
      else: 
-          args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   
+          args_dict = tools.args_to_dict(argv[1:], accepted_args)   
           main(args_dict)
 
 
