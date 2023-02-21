@@ -199,7 +199,7 @@ def main(desired_replicate, rotation_deg, plot = False):
 
         else:
             print(f'Please use a bigger replication than {cube.replicate}')
-            test_replicate[int(i%3)] = test_replicate[int(i%3)] + 1
+            test_replicate[int(i%3)] = test_replicate[int(i%3)] + 5
 
 
 if __name__ == '__main__':

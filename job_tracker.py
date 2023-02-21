@@ -283,34 +283,6 @@ def check_repeat_progress(args_dict):
      analysis_started  = False
 
 
-     analysed_dirs = [tools.Path(path)[-1] for path in glob(f"{bombard_dir}{path}/*r/all.xyz")]
-     clean__dirs = [path for path in analysed_dirs if os_path.exists(f"{path}/xyz_files/0.xyz") == False]
-
-     raw_paths = [path for path in repeat_paths if path not in analysed_dirs]
-     running_paths = [path for path in raw_paths if os_path.exists(f"{path}/OUT") == True]
-
-     for path in running_paths:
-
-          out_files = tools.file_proc(f'{path}/OUT')
-          out_files.reverse()
-
-          for line in out_files[:50]:
-               line = line.split(':')
-
-               if line[0] == 'Total wall time':
-                    complete_sims += 1
-                    break
-
-               elif line[0] == 'slurmstepd':
-                    failed_sims += 1
-                    failed_sims_list.append(path.split('/')[-1])
-                    break
-
-
-
-     
-
-
 
 
 

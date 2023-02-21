@@ -1,10 +1,11 @@
 
-import numpy as np
-import math
-import os
-import random
-import pprint
-import glob
+
+from numpy import array, ones, zeros, average, std, delete
+from math import sqrt
+from os import path, mkdir
+from random import random, randint
+from pprint import pprint
+from glob import glob
 
 def file_proc(file, seperator = "\n"):
     """Short function to split text files into a list of lines"""
@@ -18,8 +19,7 @@ class Path:
 
     def __init__(self, path):
 
-        self.path = path
-        #self.dir_check()
+        self.path = self.dir_check(f"{path}")
 
         self.sep = '/'
 
@@ -28,27 +28,29 @@ class Path:
 
     def __getitem__(self, index):
         if self.path[-1] == '/':
-            trimmed_path = self.path.split('/')[index - 1]
+            trimmed_path = self.path.split('/')[:-1][index]
         else:
             trimmed_path = self.path.split('/')[index]
         if type(trimmed_path) == list:
-            return self.sep.join(trimmed_path)
+            return Path(self.sep.join(trimmed_path))
         else:
             return trimmed_path
     
     def __add__(self, string):
         return Path(f"{self.path}/{string}")
 
-    def dir_check(self, path_arg = None):
+    def dir_check(self, path_arg):
             try:
-                print(f"\nSELF 1-: {self[-1]}")
-                self[-1].index('.')
+                split_path_arg = str(path_arg).split('/')
+                
+                if split_path_arg[-1] != '':
+                    split_path_arg[-1].index('.')
+                
                 
             except ValueError:
-                
-                self.path = self.path + '/'
-                
-
+                path_arg += '/'
+      
+            return path_arg
     
     
 
@@ -154,12 +156,12 @@ class Input_files():
 
     def update_seeds(self, single_atom, temp = 300):
 
-        self.edit('velocity',  f'cmov create {temp} {int(random.random()*100000)} rot yes dist gaussian', second_val = 'cmov')
+        self.edit('velocity',  f'cmov create {temp} {int(random()*100000)} rot yes dist gaussian', second_val = 'cmov')
 
         if single_atom == True:
-            self.edit('create_atoms', f'3 random 1 {int(random.random()*100000)} box')
+            self.edit('create_atoms', f'3 random 1 {int(random()*100000)} box')
         else:
-            self.edit('create_atoms', f'3 random 1 $d{random.randint(1,9)} box')
+            self.edit('create_atoms', f'3 random 1 $d{randint(1,9)} box')
 
     def get_data_filepaths(self):
         return [file for outer in self.input_dict['read_data'] for file in outer]
@@ -194,7 +196,13 @@ class Input_files():
                     return self.input_dict[key][i]
 
 
+def path_check(path):
 
+    try:
+        open(path)
+        return True
+    except FileNotFoundError:
+        return False
 
 class Data_file:
 
@@ -226,8 +234,6 @@ class Data_file:
 
                 line = line.split()
 
-                print(f"line:{line}")
-
                 if line[-1] == 'atoms':
                     self.number_of_atoms = int(line[0])
 
@@ -250,8 +256,7 @@ class Data_file:
                 
                     atom_dict = dict()
                     for item in range(1, self.number_of_atom_types+1):
-                        print('here')
-                        print(self.split_data_file[i+item])
+
                         atom_dict[str(item)] = float(self.split_data_file[i+item].split()[-1])
                     
                     self.atom_masses = atom_dict
@@ -311,7 +316,7 @@ class Data_file:
 
 def repeat_check(path):
     
-    repeats = glob.glob(f"{path}/*r")
+    repeats = glob(f"{path}/*r")
     if len(repeats)>0:
         return True
     else:
@@ -369,7 +374,7 @@ def str_to_arr(string):
     
     columns = len(string[0].split())
  
-    arr = np.ones([len(string), columns])*111
+    arr = ones([len(string), columns])*111
 
    
     if string[0].split(' ')[-2][-1] == ',':
@@ -395,7 +400,7 @@ def str_to_arr(string):
 
         if len(line) > 1:
             line = [float(i) for i in line]
-            arr[index,:] = np.array(line)
+            arr[index,:] = array(line)
 
     return arr
 
@@ -464,7 +469,7 @@ def time_convert(val, time_to_sec = False, sec_to_time = False, time_of_day = Fa
 
 
 def bombard_directory():
-    return Path(os.path.dirname(os.path.realpath(__file__)))
+    return Path(path.dirname(path.realpath(__file__)))
 
 def time_add(time1_str, time2_str, add = True, subtract = False, time_of_day = False):
     time1 = time_convert(time1_str, time_to_sec=True)
@@ -487,12 +492,12 @@ def custom_to_array(split_dump_file):
 
             elif line[0] == "ITEM:" and line[1] == "ATOMS":
                 titles = line[2:]
-                out_arr = np.zeros([no_of_atoms,int(len(line)-2)])
+                out_arr = zeros([no_of_atoms,int(len(line)-2)])
                 
                 for i2, line in enumerate(split_dump_file[i+1:]):
                     line = line.split()
 
-                    out_arr[i2] = np.array([float(x) for x in line])
+                    out_arr[i2] = array([float(x) for x in line])
         except IndexError:
             pass
 
@@ -507,7 +512,7 @@ def xyz_to_array(xyz_file_path, line_length = 5):
 
     xyz_file = file_proc(f"{xyz_file_path}")
     atoms = int(xyz_file[0])
-    atoms_arr = np.zeros([atoms,4])
+    atoms_arr = zeros([atoms,4])
     indexes = []
 
     index = -1
@@ -520,7 +525,7 @@ def xyz_to_array(xyz_file_path, line_length = 5):
             except IndexError:
                 index +=1
             atom_type_no = int(line[-4])
-            atoms_arr[index] = np.array([atom_type_no, float(line[-3]), float(line[-2]), float(line[-1])]) 
+            atoms_arr[index] = array([atom_type_no, float(line[-3]), float(line[-2]), float(line[-1])]) 
             indexes.append(index)
 
     atoms = max(indexes)
@@ -528,11 +533,10 @@ def xyz_to_array(xyz_file_path, line_length = 5):
 
     return atoms_arr
 
-def mkdir(path):
-    import os
+def make_dir(path):
 
     try:
-        os.mkdir(path)
+        mkdir(path)
     except FileExistsError:
         pass
 
@@ -552,7 +556,7 @@ def custom_to_dict(dump_path):
     
     column_titles = atoms_string[0].split()[1:]
 
-    info_array = np.ones([int(number_of_atoms)*2, len(column_titles)])*10000
+    info_array = ones([int(number_of_atoms)*2, len(column_titles)])*10000
 
     for index,line in enumerate(atoms_string[1:]):
 
@@ -565,12 +569,12 @@ def custom_to_dict(dump_path):
 
         line = [float(item) for item in line]
         
-        info_array[index] = np.array(line) 
+        info_array[index] = array(line) 
 
 
     to_delete = [index for index,line in enumerate(info_array) if line[0] == 10000]
     
-    info_array = np.delete(info_array, to_delete, 0)
+    info_array = delete(info_array, to_delete, 0)
 
 
     results_dict = dict(lammps_timestep = timestep,
@@ -584,7 +588,7 @@ def custom_to_dict(dump_path):
 
 def array_column_select(arr, columns):
 
-    new_arr = np.zeros([len(columns), arr.shape[1]])
+    new_arr = zeros([len(columns), arr.shape[1]])
 
     for i, index in enumerate(columns):
         new_arr[i] = arr[:,index]
@@ -593,7 +597,7 @@ def array_column_select(arr, columns):
 
 def region_assign(initial):
         
-    initial_atoms_arr = np.zeros([int(initial[0]),4])
+    initial_atoms_arr = zeros([int(initial[0]),4])
     indexes = []
 
     region_indexes = dict(diamond_surface = [], diamond_bulk = [])
@@ -603,7 +607,7 @@ def region_assign(initial):
         if len(line) == 5: #store in array much faster
             
             index = int(line[0]) - 1 #so atom 1 is at 0th index
-            initial_atoms_arr[index] = np.array([int(line[1]), float(line[2]), float(line[3]),  float(line[4])]) 
+            initial_atoms_arr[index] = array([int(line[1]), float(line[2]), float(line[3]),  float(line[4])]) 
             indexes.append(index)
         
             if float(line[4]) <= 0:
@@ -620,10 +624,10 @@ def region_assign(initial):
 
 
 def magnitude(vector):
-    return math.sqrt((vector[0]**2 + vector[1]**2 + vector[2]**2))
+    return sqrt((vector[0]**2 + vector[1]**2 + vector[2]**2))
 
 def avg(data):
-    return np.average(data), np.std(data)
+    return average(data), std(data)
 
 def input_misc(message, allowed_values):
     while True:
@@ -667,7 +671,7 @@ def args_to_dict(args, accecpted_args):
 
             except KeyError:
                 print('\nValid arguments: ')
-                pprint.pprint(arg_dict)
+                pprint(arg_dict)
                 print('\n')
                 raise KeyError(f'{arg[1:]} is not a valid argument.') from None
 
@@ -767,20 +771,30 @@ def time_percentage(current, total):
 
 
 
+def all_splitter(path, start_end_only = True):
 
-if __name__ == '__main__':
+    frames = file_proc(f"{path}all.xyz", seperator='\n\n')
 
-    bombard_dir = bombard_directory()
-    import random
-    input_file = Input_files(f"{bombard_dir}/in.final_SC")
-    print(input_file.input_dict['jump'])
-    print(input_file.input_dict['create_atoms'])
+    try:
+        mkdir(f'{path}/xyz_files')
+    except FileExistsError:
+        pass
 
- 
+    if start_end_only == True:
+        frames = [frames[0], frames[-2]]
 
-    data_file = Data_file(f'{bombard_dir}/LAMMPS_files/data.diamond')
+    for i, frame in enumerate(frames):
 
+        split_frame = frame.split('\n')
     
-    print(input_file.create_repeats(3, temp = 300)[0])
+        try:
+            timestep = split_frame[1]
+ 
+            with open(f"{path}/xyz_files/{timestep}.xyz", 'w') as fp:
+                fp.write(frame)
+
+        except IndexError:
+            pass
+
 
 

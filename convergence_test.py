@@ -7,9 +7,11 @@ import random
 import numpy as np
 import damage_02 as damage
 import depth_02 as depth
+import ovito_analysis as wigner_seitz_analyis
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
+import pprint
 
 ###TODO###
 #Fundemental error in this method, will always converge to the larger value as you are just sampling more of it.
@@ -29,7 +31,14 @@ def main(args_dict):
     root_dir = repeat_dirs[0][:-1]
     repeats_nums = [int(dir_name[-1][:-1]) for dir_name in repeat_dirs]
 
+    max_sample_size = int(len(repeat_dirs)/args_dict['average_over'])
+
+    if max_sample_size <= 100:
+        raise ValueError('Cannot calculate convergence for these values, please input a smaller average_over.')
+
     sample_sizes = [10,20,40,70] + [i for i in range(args_dict['step_size'],len(repeat_dirs), args_dict['step_size'])] + [len(repeat_dirs)]
+    sample_sizes = [10,20,40,70] + [i for i in range(100,max_sample_size, args_dict['step_size'])] + [max_sample_size]
+
     
     averages_dict = dict(average_depth = [[],[]],
                         average_depth_err = [[],[]],
@@ -50,8 +59,14 @@ def main(args_dict):
         
         to_average_arr =  np.zeros([args_dict['average_over'],10])
 
-        for repeat in tqdm(range(args_dict['average_over']), desc=f'Sample size - {sample_size}', ascii=False, ncols = 100):
-            sample_dirs = random.sample(repeats_nums, sample_size)
+        shuffled_dirs = random.sample(repeats_nums, args_dict['average_over']*sample_size)
+        sample_sets = [shuffled_dirs[i*sample_size:(i+1)*sample_size] for i in range(args_dict['average_over'])]
+ 
+
+
+        for repeat_index, repeat in enumerate(tqdm(range(args_dict['average_over']), desc=f'Sample size - {sample_size}', ascii=False, ncols = 100)):
+            #sample_dirs = random.sample(repeats_nums, sample_size)
+            sample_dirs = sample_sets[repeat_index]
         
             sample_dirs = [tools.Path(f"{root_dir}{sample_dir}r") for sample_dir in sample_dirs]
          
@@ -60,6 +75,10 @@ def main(args_dict):
 
             depth_obj = depth.Depth(repeats=True, path=root_dir)
             depth_obj.get_repeated_final_depths(sample_dirs)
+
+            ws_obj = wigner_seitz_analyis.Wigner_Seitz(path = root_dir, repeats=True)
+            ws_obj.get_array()
+
 
 
             to_average_arr[repeat] = np.array([

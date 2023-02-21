@@ -8,7 +8,7 @@ import sys
 import glob
 import matplotlib.pyplot as plt
 import os
-
+from tqdm import tqdm
 
 class Damage:
 
@@ -32,8 +32,8 @@ class Damage:
         max_displacements = []
         etched_atoms = []
 
-        for path in paths:
-            dsp_file = tools.file_proc(f"{path}/final.dsp")
+        for path in tqdm(paths, desc = 'Running Damage analysis'):
+            dsp_file = tools.file_proc(f"{path}final.dsp")
        
             try:
                 array, titles = tools.custom_to_array(dsp_file)

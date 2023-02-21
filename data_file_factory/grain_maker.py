@@ -121,7 +121,7 @@ def main(desired_final_size, rotation_deg):
     desired_replicate = [int(desired_final_size[1]),int(desired_final_size[0]/2), int(desired_final_size[2])]
 
     block_size_dict, limits_list = box_checker.main(desired_replicate, rotation_deg)
-   
+    block_size_dict = dict(x = 30, y = 30, z = 30)
     create_xyz(block_size_dict)
 
     data_file_name = dfm.main('0.xyz', desired_replicate, rotation_deg, limits_list, 

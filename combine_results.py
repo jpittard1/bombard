@@ -13,7 +13,7 @@ def depth_reader(file):
     split_file = tools.file_proc(file)
     depth_results_dict = dict()
 
-    for line in split_file:
+    for i, line in enumerate(split_file):
 
         line = line.split()
         if len(line)>0:
@@ -36,7 +36,57 @@ def depth_reader(file):
             elif line[0] == 'Average':
                 depth_results_dict['average'] = line[-3]
                 depth_results_dict['average_err'] = line[-1]
+                
+            elif line[0] == 'Max':
+                depth_results_dict['max'] = str(float(split_file[i+1]))
+            
+            elif line[0] == 'Frozen':
+                depth_results_dict['floor'] = str(min(tools.str_to_list(split_file[i+1], float_vals=True)))
                 return depth_results_dict
+
+            
+
+
+def ovito_reader(file):
+
+    split_file = tools.file_proc(file)
+    ovito_results_dict = dict()
+
+    for line in split_file:
+
+        line = line.split()
+        if len(line)>0:
+            if line[0] == 'Wigner':
+                dir_name = line[5].split('/')[-2]
+                ovito_results_dict['dir_name'] = dir_name
+                print(f'ovito dirname : {dir_name}')
+                ovito_results_dict['atom_type'] = dir_name.split('_')[0]
+                ovito_results_dict['energy'] = dir_name.split('_')[1][:-2]
+                ovito_results_dict['repeats'] = line[7]
+
+            elif line[-3] == 'vacancy:':
+                ovito_results_dict['vacancy_perc'] = line[-2]
+
+            elif line[3] == 'vacancies':
+                ovito_results_dict['vacancies'] = line[-3]
+                ovito_results_dict['vacancies_err'] = line[-1]
+
+            elif line[-3] == 'interstitial:':
+                ovito_results_dict['interstitial_perc'] = line[-2]
+
+            elif line[3] == 'interstitials':
+                ovito_results_dict['vacancies'] = line[-3]
+                ovito_results_dict['vacancies_err'] = line[-1]
+
+            elif line[-3] == 'atom:':
+                ovito_results_dict['etched_perc'] = line[-2]
+
+            elif line[3] == 'etched':
+                ovito_results_dict['etched'] = line[-3]
+                ovito_results_dict['etched_err'] = line[-1]
+
+                return ovito_results_dict
+
 
 
 def damage_reader(file):
@@ -99,6 +149,8 @@ def main(args_dict):
         target = 'depth_results/depth.txt'
     elif args_dict['analysis'] == 'damage':
         target = 'damage_results/damage.txt'
+    elif args_dict['analysis'] == 'ovito':
+        target = 'ovito_results/ws_analysis.txt'
     else:
         raise ValueError('Please input analysis method (damage or depth)')
 
@@ -127,6 +179,8 @@ def main(args_dict):
             analysis_dict = depth_reader(file)
         elif args_dict['analysis'] == 'damage':
             analysis_dict = damage_reader(file)
+        elif args_dict['analysis'] == 'ovito':
+            analysis_dict = ovito_reader(file)
 
         analysis_dicts[analysis_dict['energy']] = analysis_dict
 

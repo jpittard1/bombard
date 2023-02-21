@@ -38,6 +38,7 @@ def main(args_dict):
 
         combine_args_dict = dict(path = args_dict['analysis_path'],
                                 analysis = 'depth')
+                                
 
         combine_results.main(combine_args_dict)
 
@@ -46,9 +47,15 @@ def main(args_dict):
 
         combine_results.main(combine_args_dict)
 
+        combine_args_dict = dict(path = args_dict['analysis_path'],
+                                analysis = 'ovito')
+
+        combine_results.main(combine_args_dict)
+
         print(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
         os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
         os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_damage.csv {onedrive_base_path}{args_dict['onedrive_path']}")
+        os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_ovito.csv {onedrive_base_path}{args_dict['onedrive_path']}")
 
         print(f"\nUpdate successful.")
 

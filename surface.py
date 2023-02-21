@@ -1,5 +1,5 @@
 
-from urllib.request import HTTPDigestAuthHandler
+
 import tools
 import os
 import matplotlib.pyplot as plt

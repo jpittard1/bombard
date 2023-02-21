@@ -10,7 +10,7 @@ import os
 import sys
 import matplotlib.pylab as plt
 import glob
-
+from tqdm import tqdm
 
 '''
 Requirements and Considations
@@ -41,21 +41,27 @@ class Depth:
 
         if self.repeats == False:
             self.settings_dict =  tools.csv_reader(f"{self.path}/settings.csv")
+        else:
+            self.settings_dict = tools.csv_reader(f"{self.path}0r/settings.csv")
 
         try:
             os.mkdir(f"{self.path}/depth_results/")
         except FileExistsError:
             pass
 
-
     def get_repeated_final_depths(self, file_paths):
 
         reflected_atoms = 0
         bombard_zs = []
         implanted_zs = []
+        floor_heights = []
        
-        for path in file_paths:
-            repeat_final_arr = tools.xyz_to_array(f"{path}/final_indexed.xyz")
+        for path in tqdm(file_paths, desc = "Running Depth analysis"):
+
+            settings_dict = tools.csv_reader(f"{path[:-1]}settings.csv")  
+            floor_heights.append((settings_dict['replicate'][-1]-1)*3.567)    
+
+            repeat_final_arr = tools.xyz_to_array(f"{path}")
 
             try:
                 bombard_atom_index = list(repeat_final_arr[:,0]).index(2)
@@ -70,10 +76,12 @@ class Depth:
             except ValueError:
                 reflected_atoms += 1
 
+
         self.reflected_atoms = reflected_atoms
         self.bombard_zs = bombard_zs
         self.implanted_zs = implanted_zs
         self.no_of_repeats = len(file_paths)
+        self.floor_heights = list(dict.fromkeys(floor_heights))
 
       
         
@@ -87,6 +95,12 @@ class Depth:
         average, stderr = tools.avg(self.implanted_zs)
         results += f'\nAverage final depth: {average:.6g} ± {stderr:.3g}\n'
 
+        results += "\nMax depth measured:\n"
+        results += f"{max(self.implanted_zs)}\n"
+
+        results += "\nFrozen Floor depth:\n"
+        results += f"{self.floor_heights}\n"
+
         results += "\nFinal implanted zs (for avg and hist):\n"
         results += f"{self.implanted_zs}\n"
 
@@ -96,7 +110,13 @@ class Depth:
         with open(f"{self.path}/depth_results/depth.txt", 'w') as fp: #rewriting edited input file
             fp.write(results)
 
-        plt.hist(self.implanted_zs,bins = 50)
+        plt.hist(self.implanted_zs,bins = 20)
+        xmin, xmax, ymin, ymax = plt.axis()
+
+        for height in self.floor_heights:
+            plt.vlines(x = height, ymin= ymin, ymax=ymax, colors='b', linestyles='dashed')
+            plt.vlines(x = height +3.567, ymin= ymin, ymax=ymax, colors='r', linestyles='dotted')
+
         plt.xlabel('Depth / A')
         plt.title('Depth of implanted atoms')
         plt.savefig(f'{self.path}/depth_results/depth_histogram.png', dpi = 300)
@@ -203,6 +223,11 @@ def main(args_dict):
     else:
         args_dict['repeats'] = tools.str_to_bool(args_dict['repeats'])
 
+    if args_dict['ssd'] == None:
+        args_dict['ssd'] = False
+    else:
+        args_dict['ssd'] = tools.str_to_bool(args_dict['repeats'])
+
     args_dict['path'] = tools.Path(args_dict['path'])
 
     if args_dict['repeats'] == False:
@@ -217,9 +242,8 @@ def main(args_dict):
     if args_dict['repeats'] == True:
         
         bombard_dir = tools.bombard_directory()
-        repeat_dirs_path = glob.glob(f"{bombard_dir}/{args_dict['path']}/*")
-
-        repeat_dirs_path = [path for path in repeat_dirs_path if path[-1] == 'r']
+        repeat_dirs_path = glob.glob(f"{bombard_dir}{args_dict['path']}*r/final_indexed.xyz")
+        repeat_dirs_path = [tools.Path(path) for path in repeat_dirs_path]
 
         depth = Depth(args_dict['path'], args_dict['repeats'])
         depth.get_repeated_final_depths(repeat_dirs_path)
@@ -231,7 +255,7 @@ def main(args_dict):
 
 if __name__ == "__main__":
 
-    accepted_args = ['repeats', 'path']
+    accepted_args = ['repeats', 'path', 'ssd']
 
     try:
         args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   

@@ -5,6 +5,7 @@ import sys
 import glob
 import os
 from datetime import datetime
+import shutil
 
 
 
@@ -13,8 +14,18 @@ def main(args_dict):
     args_dict['master_dir'] = tools.Path(args_dict['master_dir'])
     args_dict['branch_dir'] = tools.Path(args_dict['branch_dir'])
 
-    branch_dirs = glob.glob(f"{tools.bombard_directory()}/{args_dict['branch_dir']}/*r")
-    master_dirs = glob.glob(f"{tools.bombard_directory()}/{args_dict['master_dir']}/*r")
+    branch_dirs = [tools.Path(path) for path in glob.glob(f"{tools.bombard_directory()}{args_dict['branch_dir']}*r")]
+    master_dirs = [tools.Path(path) for path in glob.glob(f"{tools.bombard_directory()}{args_dict['master_dir']}*r")]
+
+    branch_repeats = [int(branch_dir[-1][:-1]) for branch_dir in branch_dirs]
+    master_repeats = [int(master_dir[-1][:-1]) for master_dir in master_dirs]
+
+    if len(branch_dirs) == 0 or len(master_dirs) == 0:
+        raise FileNotFoundError("One or both of the directories don't include repeat files.")
+
+    if str(args_dict['master_dir']) == str(args_dict['branch_dir']):
+        raise FileExistsError("Master dir and branch dir are the same.")
+
 
     #root_dirs = list(dict.fromkeys([dir.split('/')[-2] for dir in dirs]))
 
@@ -46,7 +57,7 @@ def main(args_dict):
     '''        
     
     try:
-        record = open(f"{tools.bombard_directory()}/{args_dict['master_dir']}/record.txt")
+        record = open(f"{tools.bombard_directory()}{args_dict['master_dir']}/record.txt")
         record = record.read()
 
     except FileNotFoundError:
@@ -60,15 +71,16 @@ def main(args_dict):
 
         for i, dir in enumerate(branch_dirs):
             
-            dir_path = dir.split('/')[:-1]
-            sep = '/'
-            new_repeat_dir_name = tools.Path(f"{sep.join(dir_path)}/{len(master_dirs) + i}r")
-            target = tools.Path(f"{tools.bombard_directory()}/{args_dict['master_dir']}")
+            new_repeat_dir_name = tools.Path(f"{dir[:-1]}/{max(master_repeats) + len(branch_repeats) - i}r")
+            target = tools.Path(f"{tools.bombard_directory()}{args_dict['master_dir']}")
 
             print(f"\n\nmv {dir} to {new_repeat_dir_name}\n\n")
 
-            os.system(f"mv {dir} {new_repeat_dir_name}")
-            os.system(f"mv {new_repeat_dir_name} {target}")
+            shutil.move(f"{dir}", f"{new_repeat_dir_name}")
+            shutil.move(f"{new_repeat_dir_name}", f"{target}")
+
+            #os.system(f"mv {dir} {new_repeat_dir_name}")
+            #os.system(f"mv {new_repeat_dir_name} {target}")
 
             record += f"\n{dir} >>> {target}/{len(master_dirs) + i}r"
 
@@ -79,7 +91,7 @@ def main(args_dict):
         sep = '_'
         new_master_name = sep.join(old_master_name)
       
-        new_path = target[:-1] + '/' + new_master_name
+        new_path = str(target[:-1]) + '/' + new_master_name
 
         os.system(f"mv {target} {new_path}")
 

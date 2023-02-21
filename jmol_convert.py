@@ -40,7 +40,7 @@ class Frame():
         return frame
 
 
-def main(all_xyz_file_path):
+def main(all_xyz_file_path, jmol = False):
 
 
     split = 100
@@ -101,13 +101,14 @@ def main(all_xyz_file_path):
     equilibrium_timestep = min(times, key=lambda x:abs(x- settings_dict['pre_bombard_time']))
     equilibrium_index = times.index(equilibrium_timestep)
 
-    jmol_str = ''
-    for frame in frames:
-        jmol_str += frame.present_arr(jmol=True)
+    if jmol == True:
+        jmol_str = ''
+        for frame in frames:
+            jmol_str += frame.present_arr(jmol=True)
 
 
-    with open("%s/jmol_all.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
-        fp.write(jmol_str)
+        with open("%s/jmol_all.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
+            fp.write(jmol_str)
     
     #with open("%s/initial.xyz"%(all_xyz_file_path[:-7]), 'w') as fp: #rewriting edited input file
     #    fp.write(frames[0].present_arr(jmol = True))
@@ -130,23 +131,17 @@ def main(all_xyz_file_path):
 
 
 if __name__ == "__main__":
-   
-    current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    dir_name = sys.argv[1]
-
-    path = current_dir + '/results/' +  dir_name + "/all.xyz"
+    accepted_args = ['split', 'path', 'jmol']
 
     try:
-        main(path)
-        print("\n\nProgress: jmol convert complete.")
-        print("\n", "-"*20, '\n')
+        args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   
+    except IndexError:
+        print('\n\nERROR: Please give inputs.\n\n')
 
-    except FileNotFoundError:
-        print("\n\n")
-        print("-"*60)
-        print("\nERROR: Could not find all.xyz file.")
-        print("\nPlease run lint.py to produce all.xyz.")
-        print("\nFile path used: %s"%path)
-        print("\n")
-        print("-"*60)
+    if tools.str_to_bool(args_dict['split']) == True:
+        tools.all_splitter(args_dict['path'], start_end_only=False)
+    else:
+        main(args_dict)
+
+
