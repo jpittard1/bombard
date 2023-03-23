@@ -2,7 +2,7 @@
 import sys
 import os
 import numpy as np
-from tools import csv_reader
+import tools
 
 #Converts all.xyz into form that can be read by Jmol
 #Takes 100 frames thorughout the simulation
@@ -45,7 +45,7 @@ def main(all_xyz_file_path, jmol = False):
 
     split = 100
 
-    settings_dict = csv_reader("%s/settings.csv"%all_xyz_file_path[:-8])
+    settings_dict = tools.csv_reader("%s/settings.csv"%all_xyz_file_path[:-8])
 
     frames = []
 

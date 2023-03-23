@@ -14,8 +14,8 @@ def main(args_dict):
     args_dict['master_dir'] = tools.Path(args_dict['master_dir'])
     args_dict['branch_dir'] = tools.Path(args_dict['branch_dir'])
 
-    branch_dirs = [tools.Path(path) for path in glob.glob(f"{tools.bombard_directory()}{args_dict['branch_dir']}*r")]
-    master_dirs = [tools.Path(path) for path in glob.glob(f"{tools.bombard_directory()}{args_dict['master_dir']}*r")]
+    branch_dirs = [tools.Path(path) for path in glob.glob(f"{args_dict['branch_dir']}*r")]
+    master_dirs = [tools.Path(path) for path in glob.glob(f"{args_dict['master_dir']}*r")]
 
     branch_repeats = [int(branch_dir[-1][:-1]) for branch_dir in branch_dirs]
     master_repeats = [int(master_dir[-1][:-1]) for master_dir in master_dirs]
@@ -33,31 +33,9 @@ def main(args_dict):
     print(f"Folders to be combined: {args_dict['branch_dir']} >>> {args_dict['master_dir']}")
 
     continue_yn = tools.input_misc('Do you wish to continue (y/n)?: ', ['y','n'])
-    '''
-    if continue_yn == 'y':
 
-        target_dir = args_dict['path'].split('/')[-2]
-        name = dirs[0].split('/')[-2]
-        name = name.split('_')
-        new_dir_name = f"{name[0]}_{name[1]}_{name[2]}_{len(dirs)}r"
-
-        count = 0
-        while True:
-            try:
-                new_dir_name_full = f"{tools.bombard_directory()}/results/{target_dir}/{new_dir_name}_{count}"
-                os.mkdir(f"{new_dir_name_full}")
-                break
-            except FileExistsError:
-                count += 1
-
-        count = 0
-        for dir in dirs:
-
-            os.system(f'mv -r {dir} {new_dir_name_full}')
-    '''        
-    
     try:
-        record = open(f"{tools.bombard_directory()}{args_dict['master_dir']}/record.txt")
+        record = open(f"{args_dict['master_dir']}/record.txt")
         record = record.read()
 
     except FileNotFoundError:
@@ -72,15 +50,12 @@ def main(args_dict):
         for i, dir in enumerate(branch_dirs):
             
             new_repeat_dir_name = tools.Path(f"{dir[:-1]}/{max(master_repeats) + len(branch_repeats) - i}r")
-            target = tools.Path(f"{tools.bombard_directory()}{args_dict['master_dir']}")
+            target = tools.Path(f"{args_dict['master_dir']}")
 
             print(f"\n\nmv {dir} to {new_repeat_dir_name}\n\n")
 
             shutil.move(f"{dir}", f"{new_repeat_dir_name}")
             shutil.move(f"{new_repeat_dir_name}", f"{target}")
-
-            #os.system(f"mv {dir} {new_repeat_dir_name}")
-            #os.system(f"mv {new_repeat_dir_name} {target}")
 
             record += f"\n{dir} >>> {target}/{len(master_dirs) + i}r"
 

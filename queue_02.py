@@ -1,10 +1,19 @@
 
-
-
+import os
+import shutil
+import subprocess
+import tools
+import job_tracker
+from numpy import array, sin, cos, tan, pi
+from tqdm import tqdm
 
 #################################################################################
 ##################### USER INPUTS, see README file. #############################
 #################################################################################
+
+
+
+    
 
 def main():
 
@@ -16,10 +25,10 @@ def main():
     energy = 10
     temp = 300
     bombard_atom = 'd'
-    repeats = 470
+    repeats = 300
+    angle = 45
 
-
-    test = False
+    test =False
     hpc = True
     loaded = False
     grain = False
@@ -51,12 +60,13 @@ def main():
     atom_mass_dict = dict(  h = 1.0078,
                             d = 2.0141,
                             t = 3.0160,
-                            other = 10)
+                            other = 10,
+                            cluster = 2.98*2.0141)
 
     if test == True:
         repeats = 3
         hpc = False
-        number_of_particles = 1
+        number_of_particles = '1'
         energy = 40
         pre_bomb_run_val = 100
         post_bomb_run_val = 100
@@ -97,6 +107,8 @@ def main():
     y_width = data_file_obj.limits['y'][1]*input_file_obj.replicate[1]
     z_length = data_file_obj.limits['z'][1]*input_file_obj.replicate[2] - 3.567
 
+    virtual_replicate = [round(width/3.567) for width in ([x_width,y_width,z_length+3.567])]
+
     central = True
     if central == True:
         x_lo, y_lo = (array([x_width,y_width]) - 3*3.567)/2
@@ -106,6 +118,15 @@ def main():
         x_lo, y_lo = [0, x_width]
         x_hi, y_hi = [0, y_width]
 
+    angleimplant = tools.AngleImplant(theta = angle, replicate=virtual_replicate)
+
+    initial_position = angleimplant.find_xy()
+    velocity_arr = array([sin(pi/2 - angleimplant.theta_rad)*cos(angleimplant.phi), 
+                         sin(pi/2 - angleimplant.theta_rad)*sin(angleimplant.phi), 
+                         cos(pi/2 - angleimplant.theta_rad)])*velocity
+    
+    if number_of_particles == '1':
+        input_file_obj.edit('create_atoms', new_line=f'3 single {initial_position[0]} {initial_position[1]} {initial_position[2]}')
 
     input_file_obj.edit('region', new_line = f'top block 0 {x_width} 0 {y_width} 0 {z_length}',second_val='top')
     input_file_obj.edit('region', new_line = f'box block {x_lo} {x_hi} {y_lo} {y_hi} -55.0 -25.0',second_val='box')
@@ -113,7 +134,7 @@ def main():
     input_file_obj.edit('variable', new_line=f'd uloop {number_of_particles}',occurance=0)
     input_file_obj.edit('pair_coeff', new_line=f'* * {bombard_dir}/LAMMPS_files/CH.rebo C H H')
 
-    input_file_obj.edit('set', new_line = f'group newH vx 0 vy 0 vz {velocity}',occurance=-1)
+    input_file_obj.edit('set', new_line = f'group newH vx {velocity_arr[0]} vy {velocity_arr[1]} vz {velocity_arr[2]}',occurance=-1)
 
     input_file_obj.edit('fix', new_line = f'1 all nvt temp {temp} {temp} 0.1',second_val='1')
     input_file_obj.edit('run', new_line=f'{pre_bomb_run_val} #prebombardment', occurance=0)
@@ -122,7 +143,8 @@ def main():
     #input_file_obj.update_seeds(single_atom = single_atom, temp = temp)
     #input_file_obj.publish(path = f'{bombard_dir}/LAMMPS_files/{input_file_name}', overwrite = True)
 
-    input_file_obj.create_repeats(repeats, temp = temp)
+    input_file_obj.create_repeats(repeats, temp = temp, angle=angle, 
+                                  virtual_replicate=virtual_replicate, velocity=velocity)
 
 
 
@@ -174,6 +196,7 @@ def main():
                             diamond_type = diamond_type,
                             energy = energy,
                             temp = temp,
+                            angle = angle,
                             atom_type = bombard_atom,
                             pre_bombard_time = pre_bomb_run_val,
                             bombard_time = bomb_run_val,
@@ -231,33 +254,11 @@ def main():
     ###################################################################################
 
 
-    count = 0
-    while True:
-
-        try:
-            open(f"{bombard_dir}/results/file_paths_{count}.txt")
-        except FileNotFoundError:
-            file_path_string = ''
-
-            for path in paths:
-                file_path_string += path + ', '
-
-            with open(f"{bombard_dir}/results/file_paths_{count}.txt", 'w') as fp: 
-                fp.write(file_path_string) 
-                break
-    
-        count += 1
 
 
 
 if __name__ ==  '__main__':
 
-    import os
-    import shutil
-    import subprocess
-    import tools
-    import job_tracker
-    from numpy import array
-    from tqdm import tqdm
+
 
     main()

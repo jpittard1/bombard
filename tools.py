@@ -1,9 +1,9 @@
 
 
-from numpy import array, ones, zeros, average, std, delete
+from numpy import array, ones, zeros, average, std, delete, sin, cos, tan, pi
 from math import sqrt
 from os import path, mkdir
-from random import random, randint
+from random import random, randint, uniform
 from pprint import pprint
 from glob import glob
 
@@ -37,7 +37,7 @@ class Path:
             return trimmed_path
     
     def __add__(self, string):
-        return Path(f"{self.path}/{string}")
+        return Path(f"{self.path}{string}")
 
     def dir_check(self, path_arg):
             try:
@@ -45,14 +45,50 @@ class Path:
                 
                 if split_path_arg[-1] != '':
                     split_path_arg[-1].index('.')
+                    self.type = 'file'
                 
                 
             except ValueError:
                 path_arg += '/'
+                self.type = 'directory'
       
             return path_arg
     
     
+
+
+
+class AngleImplant:
+
+    def __init__(self, theta, replicate, z = 3*3.567):
+        self.theta_deg = theta
+        self.theta_rad = theta*pi/180
+        self.replicate = replicate
+        self.x_width = replicate[0]*3.567
+        self.y_width = replicate[1]*3.567
+        self.z = z
+
+
+    def find_xy(self):
+
+        target_pos = array([uniform(3.567,4*3.567),uniform(3.567,4*3.567),0])
+        phi = uniform(0,2*pi)
+
+        self.phi = phi
+
+        x_mov = self.z*cos(phi)/tan(self.theta_rad)
+        y_mov = self.z*sin(phi)/tan(self.theta_rad)
+
+        initial_pos = target_pos - array([x_mov, y_mov, self.z])
+        initial_pos[0] = initial_pos[0]%self.x_width
+        initial_pos[1] = initial_pos[1]%self.y_width
+
+        return initial_pos
+
+
+
+
+        
 
 class Input_files():
 
@@ -158,15 +194,28 @@ class Input_files():
 
         self.edit('velocity',  f'cmov create {temp} {int(random()*100000)} rot yes dist gaussian', second_val = 'cmov')
 
-        if single_atom == True:
-            self.edit('create_atoms', f'3 random 1 {int(random()*100000)} box')
-        else:
+        if single_atom == False:
             self.edit('create_atoms', f'3 random 1 $d{randint(1,9)} box')
+
+
+    def update_velocity(self, angle, virtual_replicate, velocity):
+
+        angle_implant_obj = AngleImplant(theta=angle, replicate=virtual_replicate)
+
+        initial_position = angle_implant_obj.find_xy()
+        velocity_arr = array([sin(pi/2 - angle_implant_obj.theta_rad)*cos(angle_implant_obj.phi), 
+                         sin(pi/2 - angle_implant_obj.theta_rad)*sin(angle_implant_obj.phi), 
+                         cos(pi/2 - angle_implant_obj.theta_rad)])*velocity
+
+        self.edit('create_atoms', new_line=f'3 single {initial_position[0]} {initial_position[1]} {initial_position[2]}')
+        self.edit('set', new_line = f'group newH vx {velocity_arr[0]} vy {velocity_arr[1]} vz {velocity_arr[2]}',occurance=-1)
+        
+
 
     def get_data_filepaths(self):
         return [file for outer in self.input_dict['read_data'] for file in outer]
 
-    def create_repeats(self, repeats, temp):
+    def create_repeats(self, repeats, temp, angle, virtual_replicate, velocity):
         if repeats == 1:
             single_atom = False
         else:
@@ -176,7 +225,9 @@ class Input_files():
         self.repeated_inputs = []
         for repeat in range(repeats):
             self.update_seeds(single_atom=single_atom, temp = temp)
+            self.update_velocity(angle, virtual_replicate, velocity)
             self.repeated_inputs.append(self.input_str)
+
 
         return self.repeated_inputs
 

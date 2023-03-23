@@ -2,8 +2,9 @@
 
 import tools
 import sys
-import os
+import shutil
 import combine_results
+import os
 
 
 def path_check(path1, path2):
@@ -23,6 +24,8 @@ def path_check(path1, path2):
 def main(args_dict):
 
     onedrive_base_path = tools.Path('~/OneDrive\ -\ University\ of\ Bristol/PhD/Computational/Bombard/')
+    print(onedrive_base_path)
+   
     args_dict['analysis_path'] = tools.Path(args_dict['analysis_path'])
     args_dict['onedrive_path'] = tools.Path(args_dict['onedrive_path'])
 
@@ -39,23 +42,33 @@ def main(args_dict):
         combine_args_dict = dict(path = args_dict['analysis_path'],
                                 analysis = 'depth')
                                 
+        try:
+            combine_results.main(combine_args_dict)
+            os.system(f"cp {args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
+            #shutil.copy(f"{args_dict['analysis_path']}combined_depth.csv", f"{onedrive_base_path}{args_dict['onedrive_path']}")
 
-        combine_results.main(combine_args_dict)
+        except UnboundLocalError:
+            print(f"\n\nERROR: Could not update {combine_args_dict['analysis']}")
 
         combine_args_dict = dict(path = args_dict['analysis_path'],
                                 analysis = 'damage')
 
-        combine_results.main(combine_args_dict)
+        try:
+            combine_results.main(combine_args_dict)
+            os.system(f"cp {args_dict['analysis_path']}combined_damage.csv {onedrive_base_path}{args_dict['onedrive_path']}")
+        except UnboundLocalError:
+            print(f"\n\nERROR: Could not update {combine_args_dict['analysis']}")
 
         combine_args_dict = dict(path = args_dict['analysis_path'],
                                 analysis = 'ovito')
 
-        combine_results.main(combine_args_dict)
+        try:
+            combine_results.main(combine_args_dict)
+            os.system(f"cp {args_dict['analysis_path']}combined_ovito.csv {onedrive_base_path}{args_dict['onedrive_path']}")
+        except UnboundLocalError:
+            print(f"\n\nERROR: Could not update {combine_args_dict['analysis']}")
 
-        print(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
-        os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
-        os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_damage.csv {onedrive_base_path}{args_dict['onedrive_path']}")
-        os.system(f"cp {tools.bombard_directory()}/{args_dict['analysis_path']}combined_ovito.csv {onedrive_base_path}{args_dict['onedrive_path']}")
+        print(f"cp {args_dict['analysis_path']}combined_depth.csv {onedrive_base_path}{args_dict['onedrive_path']}")
 
         print(f"\nUpdate successful.")
 

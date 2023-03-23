@@ -4,20 +4,18 @@ import os
 import pprint
 import sys
 import numpy as np
-from data_file_factory.rotate import Rotate, Shift
+from rotate import Rotate, Shift
 import matplotlib.pyplot as plt
 
 
 def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0], lims = [[None,None],[None,None],[None,None]]):
 
-    counter = 0
     atom_str = ''
-    for i in range(0,array.shape[0]):
-        counter += 1
-        atom_str += f'{counter} {int(array[i][0])} {array[i][1]:.4f} {array[i][2]:.4f} {array[i][3]:.4f}\n'
+    for i in range(array.shape[0]):
+        atom_str += f'{i+1} {int(array[i][0])} {array[i][1]:.4f} {array[i][2]:.4f} {array[i][3]:.4f}\n'
 
     output_str = 'LAMMPS data file from restart file: timestep = 1, procs = 1\n\n'
-    output_str += f'{counter} atoms\n\n'
+    output_str += f'{i+1} atoms\n\n'
     output_str += '3 atom types\n\n'
     
     if lims[0][0] == None:
@@ -29,13 +27,7 @@ def array_to_datafile(array, file_name = None, path = None, extra_xy = [0,0], li
         output_str += f"{min(array[:,2])*1.01:.4f} {extra_xy[0] + max(array[:,2])*1.01:.4f} ylo yhi\n"
     else:
         output_str += f"{lims[1][0]:.4f} {lims[1][1]:.4f} ylo yhi\n"
-
-
-    print(f"x: {min(array[:,1]):.4f} {max(array[:,1]):.4f} ")
-    print(f"y: {min(array[:,2]):.4f} {max(array[:,2]):.4f} ")
  
-
-    #output_str += f"-5 71.34 zlo zhi\n\n"
 
     zlo = -50
     zhi = 71.34

@@ -114,6 +114,10 @@ def minimise_grain(data_file_name):
 
     return last_file
 
+def main_02(args_dict):
+
+    args_dict['replicate'] = [int(args_dict['replicate'][0]),int(args_dict['replicate'][1]/2), int(args_dict['replicate'][2])]
+
     
 
 def main(desired_final_size, rotation_deg):
@@ -122,6 +126,7 @@ def main(desired_final_size, rotation_deg):
 
     block_size_dict, limits_list = box_checker.main(desired_replicate, rotation_deg)
     block_size_dict = dict(x = 30, y = 30, z = 30)
+    
     create_xyz(block_size_dict)
 
     data_file_name = dfm.main('0.xyz', desired_replicate, rotation_deg, limits_list, 

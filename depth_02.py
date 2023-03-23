@@ -55,6 +55,9 @@ class Depth:
         bombard_zs = []
         implanted_zs = []
         floor_heights = []
+
+        sim_dict = dict(reflected_atoms = [],
+                        implanted_atoms = [])
        
         for path in tqdm(file_paths, desc = "Running Depth analysis"):
 
@@ -70,8 +73,10 @@ class Depth:
 
                 if bombard_z < self.surface_cut_off:
                     reflected_atoms += 1
+                    sim_dict['reflected_atoms'].append(path[-2])
                 else:
                     implanted_zs.append(bombard_z)
+                    sim_dict['implanted_atoms'].append(path[-2])
 
             except ValueError:
                 reflected_atoms += 1
@@ -82,6 +87,7 @@ class Depth:
         self.implanted_zs = implanted_zs
         self.no_of_repeats = len(file_paths)
         self.floor_heights = list(dict.fromkeys(floor_heights))
+        self.sim_dict = sim_dict
 
       
         
@@ -106,6 +112,12 @@ class Depth:
 
         results += "\nFinal bombard zs:\n"
         results += f"{self.bombard_zs}\n"
+
+        results += "\nReflected sims:"
+        results += f"{self.sim_dict['reflected_atoms']}"
+
+        results += "\nImplanted sims:"
+        results += f"{self.sim_dict['implanted_atoms']}"
 
         with open(f"{self.path}/depth_results/depth.txt", 'w') as fp: #rewriting edited input file
             fp.write(results)
@@ -223,11 +235,6 @@ def main(args_dict):
     else:
         args_dict['repeats'] = tools.str_to_bool(args_dict['repeats'])
 
-    if args_dict['ssd'] == None:
-        args_dict['ssd'] = False
-    else:
-        args_dict['ssd'] = tools.str_to_bool(args_dict['repeats'])
-
     args_dict['path'] = tools.Path(args_dict['path'])
 
     if args_dict['repeats'] == False:
@@ -240,9 +247,8 @@ def main(args_dict):
         depth.publish_densities()
 
     if args_dict['repeats'] == True:
-        
-        bombard_dir = tools.bombard_directory()
-        repeat_dirs_path = glob.glob(f"{bombard_dir}{args_dict['path']}*r/final_indexed.xyz")
+  
+        repeat_dirs_path = glob.glob(f"{args_dict['path']}*r/final_indexed.xyz")
         repeat_dirs_path = [tools.Path(path) for path in repeat_dirs_path]
 
         depth = Depth(args_dict['path'], args_dict['repeats'])
@@ -255,7 +261,7 @@ def main(args_dict):
 
 if __name__ == "__main__":
 
-    accepted_args = ['repeats', 'path', 'ssd']
+    accepted_args = ['repeats', 'path', 'full_path']
 
     try:
         args_dict = tools.args_to_dict(sys.argv[1:], accepted_args)   

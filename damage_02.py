@@ -149,7 +149,7 @@ def main(args_dict):
 
     damage = Damage(args_dict['repeats'], args_dict['path'])
 
-    repeated_paths = glob.glob(f"{tools.bombard_directory()}/{args_dict['path']}/*r/final.dsp")
+    repeated_paths = glob.glob(f"{args_dict['path']}/*r/final.dsp")
   
     repeated_paths = [tools.Path(path)[:-1] for path in repeated_paths]
 
