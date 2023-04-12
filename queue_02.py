@@ -47,12 +47,13 @@ def main():
         input_file_name = 'in.loaded_multi_bombard'
     if grain == True:
         input_file_name = 'in.final_pc'
-    if orient == True:
-        input_file_name = 'in.final_orient'
-        #data_file = 'data.diamond'
+   
     if multi_bombard == True:
         input_file_name = 'in.final_sc'
-        #data_file = 'data.diamond'
+
+        if orient == True:
+            input_file_name = 'in.final_orient_multi'
+   
 
     if single_atom == True:
         repeats = 10

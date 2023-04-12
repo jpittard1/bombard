@@ -667,7 +667,12 @@ def run_multi_analysis(last_jobs = None, job_ids = [None], file_names = [None]):
 
 def main(args_dict):
 
-     if tools.str_to_bool(args_dict['repeats']) == True:
+     if args_dict['repeats'] == None:
+          args_dict['repeats'] = tools.repeat_check(args_dict['path'])
+     else:
+          args_dict['repeats'] = tools.str_to_bool(args_dict['repeats'])
+
+     if args_dict['repeats'] == True:
           check_repeat_progress(args_dict)
 
      elif tools.str_to_bool(args_dict['recent']) == True:

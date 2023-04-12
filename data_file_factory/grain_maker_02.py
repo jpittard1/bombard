@@ -351,9 +351,7 @@ class Crystal:
 
 def main(args_dict):
 
-    target_replicate = [16,16,16]
     target_replicate = args_dict['replicate']
-    rotation = [54.75,0,45]
     rotation = args_dict['rotation']
     corner_to_corner = np.sqrt((target_replicate[0]/2)**2 + target_replicate[1]**2+ target_replicate[2]**2)
     replicate = [int(corner_to_corner)+1 for i in range(3)]
